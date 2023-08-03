@@ -1,6 +1,6 @@
-use std::{time::Duration, thread, io::{Write, stdout, BufRead}, error::Error, ops::Mul};
+use std::{time::Duration, thread, io::{Write, stdout, BufRead}};
 use crossterm::{cursor, terminal, ExecutableCommand};
-use serde::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize}; 
 use crate::clear_console;
 
 fn format_dur_hms(dur: Duration) -> String {

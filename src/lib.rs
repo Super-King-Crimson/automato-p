@@ -7,8 +7,11 @@ use serde_json;
 pub fn clear_console() {
     print!("{esc}c", esc = 27 as char);
     stdout().flush().unwrap();
-}
+}   
 
+pub fn startup() {
+    todo!("FIGURE OUT HOW TO SERDE STUFF INTO A FILE");
+}
 
 pub fn run() {
     clear_console();
