@@ -1,5 +1,6 @@
-use std::{time::Duration, thread, io::{Write, stdout}};
+use std::{time::Duration, thread, io::{Write, stdout, BufRead}, error::Error, ops::Mul};
 use crossterm::{cursor, terminal, ExecutableCommand};
+use serde::{Serialize, Deserialize};
 use crate::clear_console;
 
 fn format_dur_hms(dur: Duration) -> String {
@@ -39,7 +40,7 @@ fn format_dur(dur: Duration) -> String {
     format!("{}{}:{}", hours_str, mins_str, secs_str)
 }
 
-#[derive(Debug)] 
+#[derive(Debug, Serialize, Deserialize)]
 pub enum RepeatType {
     LongRest {
         blocks_per_long_rest: u32,
@@ -48,24 +49,24 @@ pub enum RepeatType {
     Standard,
 }
 
-#[derive(Debug)] 
+#[derive(Debug, Serialize, Deserialize)]
 pub enum MaxBlocks {
     Infinite,
     Finite(u32),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Schedule {
-    name: String,
-    work_duration: Duration,
-    rest_duration: Duration,
+    pub name: String,
+    pub work_duration: Duration,
+    pub rest_duration: Duration,
     
-    repeat_type: RepeatType,
+    pub repeat_type: RepeatType,
 
-    max_blocks: MaxBlocks,
+    pub max_blocks: MaxBlocks,
 
-    block_count: u32,
-    working: bool,
+    pub block_count: u32,
+    pub working: bool,
 }
 
 impl Schedule {
@@ -183,5 +184,91 @@ impl Schedule {
                 _ => String::new(),
             }
         );
+    }
+}
+
+const SCHEDULE_QUESTIONS: [&str; 8] = [
+    "What should your new Schedule be named?",
+    "How long should your work block be? (HH:MM::SS)",
+    "What about your rest block? (HH:MM::SS)",
+
+    "Should your schedule (1)end on its own, or (2)should you have to manually exit? (Answer 1 or 2)",
+    "After how many work + rest blocks should your schedule end?",
+
+    "Do you want a long break? (y/n)",
+    "After how many work + rest blocks do you want your long break?",
+    "How long should your break be? (HH:MM:SS)",
+];
+
+fn hhmmss_to_duration(str: &str) -> Duration {
+    let mut secs = 0u64;
+
+    for (s, i) in str.split(':').rev().zip(0u32..) {
+        secs += s.parse::<u64>().unwrap() * 60u64.checked_pow(i).unwrap();
+    }
+
+    Duration::from_secs(secs)
+}
+
+pub fn create_new_schedule() -> Schedule {
+    let mut input = std::io::stdin().lock();
+    let mut output = stdout().lock();
+
+    let mut name = String::new();
+    let mut work_duration = Duration::ZERO;
+    let mut rest_duration = Duration::ZERO;
+
+    let mut max_blocks = MaxBlocks::Infinite;
+
+    let mut blocks_per_long_rest = 0u32;
+    let mut long_rest_duration = Duration::ZERO;
+    let mut repeat_type = RepeatType::Standard;
+
+    for mut i in 0..SCHEDULE_QUESTIONS.len() {
+        clear_console();
+
+        println!("{}", SCHEDULE_QUESTIONS[i]);
+        let mut response = String::new();
+        input.read_line(&mut response);
+        response = response.trim().to_string();
+
+        match i { 
+            0 => name.push_str(response.trim()),
+            1 => work_duration = hhmmss_to_duration(&response),
+            2 => rest_duration = hhmmss_to_duration(&response),
+            3 => {
+                if response.eq("1") {
+                    ()
+                } else if response.eq("2") {
+                    i += 1;
+                } else {
+                    panic!("brother you have entered an invalid character");
+                }
+            }
+            4 => max_blocks = MaxBlocks::Finite(response.parse().unwrap()),
+            5 => if response.eq_ignore_ascii_case("y") {
+                ()
+            } else if response.eq_ignore_ascii_case("n") {
+                i += 2;
+            } else {
+                panic!("brother you have entered an invalid character");
+            }
+            6 => blocks_per_long_rest = response.parse().unwrap(),
+            7 => {
+                long_rest_duration = hhmmss_to_duration(&response);
+                repeat_type = RepeatType::LongRest { blocks_per_long_rest, long_rest_duration };
+            }
+            _ => panic!("How did we get here?"),
+        }
+    }
+
+    Schedule { 
+        name, 
+        work_duration,
+        rest_duration,
+        repeat_type, 
+        max_blocks, 
+        block_count: 1, 
+        working: true 
     }
 }

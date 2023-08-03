@@ -1,3 +1,7 @@
 fn main() {
-    automato_p::startup();
+    // automato_p::startup();
+    
+    loop {
+        automato_p::run();
+    }
 }
