@@ -1,8 +1,8 @@
-use crate::{save_load, utils::console};
+use crate::{save_load, utils::{console, wait}};
 use std::time::Duration;
 
 use super::*;
-use crate::app; 
+use crate::app;
 
 const SCHEDULE_QUESTIONS: [&str; 8] = [
     "What should your new Schedule be named?",
@@ -99,4 +99,44 @@ pub fn start() {
     let parsed: usize = response.parse().unwrap();
 
     app::start_schedule_n(parsed);
+}
+
+const MODIFY_OPTIONS: [&str; 5] = [
+    "Change name",
+    "Change work/rest/long rest settings",
+    "Add or remove schedule duration",
+    "Delete schedule",
+    "Return to menu",
+];
+
+pub fn modify(mut schedule: Schedule) -> Option<Schedule> {
+    loop {
+        console::clear();
+        println!("What would you like to change about {}?", schedule.name);
+
+        for i in 0..MODIFY_OPTIONS.len() {
+            println!("{i}: {}", MODIFY_OPTIONS[i]);
+        }
+
+        match console::get_input_trimmed().as_str() {
+            "0" => {
+                println!("What would you like to change it to?");
+                let (old_name, new_name) = (schedule.name, console::get_input_trimmed());
+                schedule.name = new_name.clone(); 
+                println!("Successfully changed schedule name from {old_name} to {new_name}.");
+                wait::for_secs(3);
+            },
+            "1" => (),
+            "2" => (),
+            "3" => (),
+            "4" => break,
+            _ => {
+                println!("Invalid character, press any key to retry");
+                wait::for_ms(100);
+                console::wait_for_key_press();
+            }
+        }
+    }
+
+    None
 }
