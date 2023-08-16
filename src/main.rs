@@ -1,7 +1,9 @@
-fn main() {
-    // automato_p::startup();
+use automato_p::app; 
 
+fn main() {
+    app::startup();
+    
     loop {
-        automato_p::run();
+        app::run();
     }
 }
