@@ -50,7 +50,7 @@ impl Schedule {
         }
     }
 
-    pub fn start(mut self) {
+    pub fn start(&mut self) {
         let mut dur = self.work_duration;
         let quarter_second = Duration::from_millis(250);
 
@@ -60,8 +60,8 @@ impl Schedule {
         println!("Working block 1");
 
         loop {
-            console::move_cursor_to(0, 0);
-            print!("{}", format::dur_to_xhxmxs(dur));
+            console::move_cursor_to(0, 1);
+            print!("{}", format::dur_to_hhmmss(dur));
             console::flush();
 
             thread::sleep(quarter_second);

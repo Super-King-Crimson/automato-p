@@ -1,8 +1,22 @@
-use crate::{utils::console, schedule::{self, Schedule}, save_load};
+use crate::{
+    save_load,
+    schedule::{self, Schedule},
+    utils::console,
+};
 
 static mut SCHEDULES: Vec<Schedule> = vec![];
 
-fn display_schedules() {
+pub fn start_schedule_n(n: usize) {
+    unsafe {
+        if n >= SCHEDULES.len() {
+            panic!("Schedule number {n} does not exist");
+        } else {
+            SCHEDULES[n].start();
+        }
+    }
+}
+
+pub fn display_schedules() {
     unsafe {
         for (i, schedule) in SCHEDULES.iter().enumerate() {
             println!("{i}: {}", schedule.prompt_print());
@@ -11,7 +25,7 @@ fn display_schedules() {
 }
 
 pub fn startup() {
-    unsafe { 
+    unsafe {
         SCHEDULES = save_load::load_schedules();
     }
 }
@@ -23,9 +37,7 @@ pub fn remove_schedule(index: usize) {
 }
 
 pub fn add_schedule(schedule: Schedule) {
-    unsafe {
-        SCHEDULES.push(schedule)
-    }
+    unsafe { SCHEDULES.push(schedule) }
 }
 
 pub fn run() {
@@ -34,7 +46,7 @@ pub fn run() {
     println!("Welcome to your automatic pomodoro timer!");
 
     println!("What would you like to do?");
-    
+
     println!("0: Start a schedule");
     println!("1: Create a new schedule");
     println!("2: Modify a pre-existing schedule");
@@ -45,15 +57,7 @@ pub fn run() {
     console::clear();
 
     match input.parse() {
-        Ok(0_u8) => {
-            println!("Which schedule would you like to start?");
-            display_schedules();
-            let response = console::get_input_trimmed();
-            let parsed: usize = response.parse().unwrap();
-            loop {
-                println!("You chose response {parsed}.");
-            }
-        },
+        Ok(0_u8) => schedule::prompt::start(),
         Ok(1) => schedule::prompt::create(),
         Ok(2) => todo!(),
         _ => panic!("invalid"),

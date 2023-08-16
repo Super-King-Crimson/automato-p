@@ -1,7 +1,8 @@
-use std::time::Duration;
 use crate::{save_load, utils::console};
+use std::time::Duration;
 
 use super::*;
+use crate::app; 
 
 const SCHEDULE_QUESTIONS: [&str; 8] = [
     "What should your new Schedule be named?",
@@ -49,17 +50,22 @@ pub fn create() {
                 }
             }
             4 => max_blocks = MaxBlocks::Finite(response.parse().unwrap()),
-            5 => if response.eq_ignore_ascii_case("y") {
-                ()
-            } else if response.eq_ignore_ascii_case("n") {
-                i += 2;
-            } else {
-                panic!("brother you have entered an invalid character");
+            5 => {
+                if response.eq_ignore_ascii_case("y") {
+                    ()
+                } else if response.eq_ignore_ascii_case("n") {
+                    i += 2;
+                } else {
+                    panic!("brother you have entered an invalid character");
+                }
             }
             6 => blocks_per_long_rest = response.trim().parse().unwrap(),
             7 => {
                 long_rest_duration = format::hhmmss_to_dur(&response.trim());
-                repeat_type = RepeatType::LongRest { blocks_per_long_rest, long_rest_duration };
+                repeat_type = RepeatType::LongRest {
+                    blocks_per_long_rest,
+                    long_rest_duration,
+                };
             }
             _ => panic!("How did we get here?"),
         }
@@ -67,20 +73,30 @@ pub fn create() {
         i += 1;
     }
 
-    let schedule = Schedule { 
-        name, 
+    let schedule = Schedule {
+        name,
         work_duration,
         rest_duration,
-        repeat_type, 
-        max_blocks, 
-        block_count: 1, 
-        working: true 
+        repeat_type,
+        max_blocks,
+        block_count: 1,
+        working: true,
     };
 
     save_load::save_schedule(schedule);
 
     println!("Schedule created! Press any key to continue.");
-    
+
     thread::sleep(Duration::from_millis(100));
     console::wait_for_key_press();
+}
+
+pub fn start() {
+    println!("Which schedule would you like to start?");
+    app::display_schedules();
+
+    let response = console::get_input_trimmed();
+    let parsed: usize = response.parse().unwrap();
+
+    app::start_schedule_n(parsed);
 }

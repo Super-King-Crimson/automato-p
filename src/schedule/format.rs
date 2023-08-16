@@ -16,6 +16,42 @@ pub fn dur_to_xhxmxs(dur: Duration) -> String {
     format!("{hours_str}{mins_str}{secs_str}")
 }
 
+pub fn dur_to_hhmmss(dur: Duration) -> String {
+    let mut secs = dur.as_secs();
+
+    let mut mins = secs / 60;
+    secs %= 60;
+
+    let hours = mins / 60;
+    mins %= 60;
+
+    let secs_str = {
+        if secs < 10 {
+            format!("0{secs}")
+        } else {
+            format!("{secs}")
+        }
+    };
+
+    let mins_str = {
+        if mins < 10 {
+            format!("0{mins}:")
+        } else {
+            format!("{mins}:")
+        }
+    };
+
+    let hours_str = {
+        if hours == 0 {
+            String::new()
+        } else {
+            format!("{hours}:")
+        }
+    };
+
+    format!("{hours_str}{mins_str}{secs_str}")
+}
+
 pub fn hhmmss_to_dur(str: &str) -> Duration {
     let mut secs = 0u64;
     
