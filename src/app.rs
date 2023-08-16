@@ -16,6 +16,16 @@ pub fn start_schedule_n(n: usize) {
     }
 }
 
+pub fn get_schedule(n: usize) -> &'static mut Schedule {
+    unsafe {
+        if n >= SCHEDULES.len() {
+            panic!("Schedule number {n} does not exist");
+        } else {
+            &mut SCHEDULES[n]
+        }
+    }
+}
+
 pub fn display_schedules() {
     unsafe {
         for (i, schedule) in SCHEDULES.iter().enumerate() {
@@ -59,7 +69,7 @@ pub fn run() {
     match input.parse() {
         Ok(0_u8) => schedule::prompt::start(),
         Ok(1) => schedule::prompt::create(),
-        Ok(2) => todo!(),
+        Ok(2) => schedule::prompt::modify(),
         _ => panic!("invalid"),
     };
 }

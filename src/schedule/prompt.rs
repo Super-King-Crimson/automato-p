@@ -109,7 +109,15 @@ const MODIFY_OPTIONS: [&str; 5] = [
     "Return to menu",
 ];
 
-pub fn modify(mut schedule: Schedule) -> Option<Schedule> {
+pub fn modify() {
+    println!("Which schedule would you like to modify?");
+    app::display_schedules();
+
+    let response = console::get_input_trimmed();
+    let parsed: usize = response.parse().unwrap();
+
+    let schedule = app::get_schedule(parsed);
+
     loop {
         console::clear();
         println!("What would you like to change about {}?", schedule.name);
@@ -121,7 +129,7 @@ pub fn modify(mut schedule: Schedule) -> Option<Schedule> {
         match console::get_input_trimmed().as_str() {
             "0" => {
                 println!("What would you like to change it to?");
-                let (old_name, new_name) = (schedule.name, console::get_input_trimmed());
+                let (old_name, new_name) = (schedule.name.clone(), console::get_input_trimmed());
                 schedule.name = new_name.clone(); 
                 println!("Successfully changed schedule name from {old_name} to {new_name}.");
                 wait::for_secs(3);
@@ -137,6 +145,4 @@ pub fn modify(mut schedule: Schedule) -> Option<Schedule> {
             }
         }
     }
-
-    None
 }
