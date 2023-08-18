@@ -1,12 +1,11 @@
-pub mod prompt;
-mod format;
+pub mod format;
 
 use crate::utils::console;
 use std::{time::Duration, thread, fmt::Display};
 use serde::{Serialize, Deserialize}; 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum RepeatType {
+pub enum RestType {
     LongRest {
         blocks_per_long_rest: u32,
         long_rest_duration: Duration,
@@ -15,7 +14,7 @@ pub enum RepeatType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum MaxBlocks {
+pub enum RepeatType {
     Infinite,
     Finite(u32),
 }
@@ -27,8 +26,7 @@ pub struct Schedule {
     pub rest_duration: Duration,
     
     pub repeat_type: RepeatType,
-
-    pub max_blocks: MaxBlocks,
+    pub rest_type: RestType,
 }
 
 const QUARTER_SECOND: Duration = Duration::from_millis(250);
@@ -63,7 +61,7 @@ impl Schedule {
                     } else {
                         block_count += 1;
 
-                        if let MaxBlocks::Finite(repeats) = self.max_blocks {
+                        if let RepeatType::Finite(repeats) = self.repeat_type {
                             if block_count > repeats {
                                 println!("Congratulations, you've completed your schedule! 🎉🎉🎉");
                                 thread::sleep(CONGRATS_TIME);
@@ -71,7 +69,7 @@ impl Schedule {
                             }
                         }
 
-                        if let RepeatType::LongRest { blocks_per_long_rest, long_rest_duration } = self.repeat_type {
+                        if let RestType::LongRest { blocks_per_long_rest, long_rest_duration } = self.rest_type {
                             if block_count % blocks_per_long_rest == 1 && block_count != 1 {
                                 println!("Congratulations on completing {} blocks! Here's a deserved long break:",
                                     if block_count == blocks_per_long_rest { blocks_per_long_rest.to_string() } 
@@ -96,12 +94,12 @@ impl Schedule {
     }
 
     fn get_total_duration(&self) -> Option<Duration> {
-        match self.max_blocks {
-            MaxBlocks::Finite(blocks) => {
+        match self.repeat_type {
+            RepeatType::Finite(blocks) => {
                 let total_work = self.work_duration * blocks;
                 let mut total_rest = self.rest_duration * (blocks - 1);
 
-                if let RepeatType::LongRest { blocks_per_long_rest, long_rest_duration } = self.repeat_type {
+                if let RestType::LongRest { blocks_per_long_rest, long_rest_duration } = self.rest_type {
                     let long_rests = (blocks - 1) / blocks_per_long_rest;
 
                     total_rest += long_rest_duration * long_rests;
@@ -110,26 +108,26 @@ impl Schedule {
 
                 Some(total_work + total_rest)
             }
-            MaxBlocks::Infinite => None,
+            RepeatType::Infinite => None,
         }
     }
 }
 
 impl Display for Schedule {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{name}: {work_dur} work, {rest_dur} rest{repeat_type_details}{max_blocks_details}",
+        write!(f, "{name}: {work_dur} work, {rest_dur} rest{rest_type_details}{repeat_type_details}",
         
             name = self.name,
             work_dur = format::dur_to_xhxmxs(self.work_duration),
             rest_dur = format::dur_to_xhxmxs(self.rest_duration),
-            repeat_type_details = match self.repeat_type {
-                RepeatType::LongRest { blocks_per_long_rest, long_rest_duration } => {
+            rest_type_details = match self.rest_type {
+                RestType::LongRest { blocks_per_long_rest, long_rest_duration } => {
                     format!(", {} long rest after {} blocks", format::dur_to_xhxmxs(long_rest_duration), blocks_per_long_rest)
                 }
                 _ => String::new(),
             },
-            max_blocks_details = match self.max_blocks {
-                MaxBlocks::Finite(blocks) => format!(", {} blocks long ({})", blocks, format::dur_to_xhxmxs(self.get_total_duration().unwrap())),
+            repeat_type_details = match self.repeat_type {
+                RepeatType::Finite(blocks) => format!(", {} blocks long ({})", blocks, format::dur_to_xhxmxs(self.get_total_duration().unwrap())),
                 _ => String::new(),
             }
         )
@@ -155,8 +153,8 @@ mod tests {
             name: String::from("Pomodoro"), 
             work_duration: Duration::from_secs(25*60), 
             rest_duration: Duration::from_secs(5*60), 
-            repeat_type: RepeatType::LongRest { blocks_per_long_rest: 4, long_rest_duration: Duration::from_secs(30*60) }, 
-            max_blocks: MaxBlocks::Finite(8),
+            rest_type: RestType::LongRest { blocks_per_long_rest: 4, long_rest_duration: Duration::from_secs(30*60) }, 
+            repeat_type: RepeatType::Finite(8),
         }
     }
 
@@ -165,14 +163,14 @@ mod tests {
             name: String::from("test"), 
             work_duration: Duration::from_secs(1), 
             rest_duration: Duration::from_secs(1), 
-            repeat_type: RepeatType::Standard,
-            max_blocks: MaxBlocks::Infinite,
+            repeat_type: RepeatType::Infinite,
+            rest_type: RestType::Standard,
         }
     }
     
     fn test_bounded() -> Schedule {
         let mut test = test();
-        test.max_blocks = MaxBlocks::Finite(2);
+        test.repeat_type = RepeatType::Finite(2);
 
         test
     }

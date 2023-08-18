@@ -1,10 +1,10 @@
-use std::{fs, io::{Write, BufWriter, BufRead, BufReader}};
+use std::{fs, io::{Write, BufWriter, BufRead, BufReader}, path::Path};
 use crate::schedule::Schedule;
 
-const PATH_TO_FILE: &str = "./schedules.txt";
+pub struct SaveLoadPath(Path);
 
-fn read_schedules_from_file() -> Vec<Schedule> {
-    let file = fs::File::open(PATH_TO_FILE).unwrap();
+fn read_schedules_from_file(path: SaveLoadPath) -> Vec<Schedule> {
+    let file = fs::File::open(path).unwrap();
     let reader = BufReader::new(file);
 
     reader.lines().map(|line| serde_json::from_str(&line.unwrap()).unwrap()).collect()

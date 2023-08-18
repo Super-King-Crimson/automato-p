@@ -1,10 +1,56 @@
 use std::slice::Iter;
 use crate::{
     save_load, 
-    schedule::{self, Schedule}, 
+    schedule::Schedule, 
     utils::console,
-    prompts::{create_schedule, modify_schedule, start_schedule},
+    prompts,
 };
+
+pub struct ScheduleList(Vec<Schedule>);
+
+impl ScheduleList {
+    fn get_mut(&mut self, index: usize) -> &mut Schedule {
+        self.0.get_mut(index).unwrap()
+    }
+
+    pub fn new() -> ScheduleList {
+        ScheduleList(Vec::new())
+    }
+
+    pub fn start_schedule(&self, index: usize) {
+        self.get(index).start();
+    }
+
+    pub fn display_list(&self) {
+        self.iter().enumerate().for_each(|(i, sch)| println!("{i}: {sch}"));
+    }
+    
+    pub fn get(&self, index: usize) -> &Schedule {
+        self.0.get(index).unwrap()
+    }
+
+    pub fn push(&mut self, schedule: Schedule) {
+        self.0.push(schedule);
+    }
+
+    pub fn insert(&mut self, index: usize, schedule: Schedule) {
+        self.0.insert(index, schedule);
+    }
+
+    pub fn remove(&mut self, index: usize) {
+        save_load::delete_schedule(index);
+        self.0.remove(index);
+    }
+
+    pub fn replace(&mut self, index: usize, replacement: Schedule) {
+        save_load::replace_schedule(index, &replacement);
+        *self.get_mut(index) = replacement;
+    }
+
+    pub fn iter(&self) -> Iter<'_, Schedule> {
+        self.0.iter()
+    }
+}
 
 pub fn startup() -> ScheduleList {
     ScheduleList(save_load::load_schedules())
@@ -27,67 +73,9 @@ pub fn run(schedule_list: &mut ScheduleList) {
     console::clear();
 
     match input.parse() {
-        Ok(0_u8) => schedule::prompt::start(schedule_list),
-        Ok(1) => schedule::prompt::create(schedule_list),
-        Ok(2) => schedule::prompt::modify(schedule_list),
+        Ok(0_u8) => prompts::start_schedule::start(schedule_list),
+        Ok(1) => prompts::create_schedule::start(schedule_list),
+        Ok(2) => todo!(),
         _ => panic!("invalid"),
     };
-}
-
-pub struct ScheduleList(Vec<Schedule>);
-
-impl ScheduleList {
-    fn get_mut(&mut self, index: usize) -> &mut Schedule {
-        self.0.get_mut(index).unwrap()
-    }
-}
-
-impl Schedules for ScheduleList {
-    fn get(&self, index: usize) -> &Schedule {
-        self.0.get(index).unwrap()
-    }
-
-    fn push(&mut self, schedule: Schedule) {
-        self.0.push(schedule);
-    }
-
-    fn insert(&mut self, index: usize, schedule: Schedule) {
-        self.0.insert(index, schedule);
-    }
-
-    fn remove(&mut self, index: usize) {
-        save_load::delete_schedule(index);
-        self.0.remove(index);
-    }
-
-    fn replace(&mut self, index: usize, replacement: Schedule) {
-        save_load::replace_schedule(index, &replacement);
-        *self.get_mut(index) = replacement;
-    }
-
-    fn iter(&self) -> Iter<'_, Schedule> {
-        self.0.iter()
-    }
-}
-
-pub trait Schedules {
-    fn get(&self, index: usize) -> &Schedule;
-
-    fn push(&mut self, schedule: Schedule);
-
-    fn insert(&mut self, index: usize, schedule: Schedule);
-
-    fn remove(&mut self, index: usize);
-
-    fn replace(&mut self, index: usize, replacement: Schedule);
-
-    fn iter(&self) -> Iter<'_, Schedule>;
-        
-    fn start_schedule(&self, index: usize) {
-        self.get(index).start();
-    }
-
-    fn display_list(&self) {
-        self.iter().enumerate().for_each(|(i, sch)| println!("{i}: {sch}"));
-    }
 }

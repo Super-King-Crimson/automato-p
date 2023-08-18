@@ -1,7 +1,7 @@
 use crate::{
-    app::{ScheduleList, Schedules},
-    utils::{console, wait}, 
-    schedule::Schedule,
+    app::ScheduleList,
+    utils::console, 
+    schedule::{Schedule, format, RepeatType, RestType},
 };
 
 struct ScheduleCreateResponses {
@@ -9,17 +9,23 @@ struct ScheduleCreateResponses {
     work_duration: String,
     rest_duration: String,
     repeat_type: (String, String),
-    long_rest: (String, String, String),
+    rest_type: (String, String, String),
 }
 
 impl ScheduleCreateResponses {
+    const REPEAT_INFINITE: String = String::from("Infinite");
+    const REPEAT_FINITE: String = String::from("Finite");
+
+    const LONG_REST: String = String::from("Long Rest");
+    const STANDARD_REST: String = String::from("No Long Rest");
+
     fn new() -> ScheduleCreateResponses {
         ScheduleCreateResponses { 
             name: String::new(),
             work_duration: String::new(),
             rest_duration: String::new(),
             repeat_type: (String::new(), String::new()),
-            long_rest: (String::new(), String::new(), String::new()),
+            rest_type: (String::new(), String::new(), String::new()),
         }
     }
 }
@@ -37,7 +43,7 @@ const SCHEDULE_QUESTIONS: [&str; 8] = [
     "How long should your break be? (HH:MM:SS)",
 ];
 
-pub fn prompt(schedule_list: &mut ScheduleList) -> Option<ScheduleCreateResponses> {
+fn prompt(schedule_list: &mut ScheduleList) -> Option<ScheduleCreateResponses> {
     let mut responses = ScheduleCreateResponses::new();
 
     let mut i = 0;
@@ -62,9 +68,9 @@ pub fn prompt(schedule_list: &mut ScheduleList) -> Option<ScheduleCreateResponse
             2 => responses.rest_duration = response,
             3 => {
                 if response.eq("1") {
-                    responses.repeat_type.0 = String::from("finite");
+                    responses.repeat_type.0 = ScheduleCreateResponses::REPEAT_FINITE.clone();
                 } else if response.eq("2") {
-                    responses.repeat_type.0 = String::from("infinite");
+                    responses.repeat_type.0 = ScheduleCreateResponses::REPEAT_INFINITE.clone();
                     i += 1;
                 } else {
                     panic!("Invalid response: must be 1 or 2");
@@ -73,16 +79,16 @@ pub fn prompt(schedule_list: &mut ScheduleList) -> Option<ScheduleCreateResponse
             4 => responses.repeat_type.1 = response,
             5 => {
                 if response.eq_ignore_ascii_case("y") {
-                    responses.long_rest.0 = String::from("yes");
+                    responses.rest_type.0 = ScheduleCreateResponses::LONG_REST;
                 } else if response.eq_ignore_ascii_case("n") {
-                    responses.long_rest.0 = String::from("no");
+                    responses.repeat_type.0 = ScheduleCreateResponses::STANDARD_REST;
                     i += 2;
                 } else {
                     panic!("Invalid response: y or n");
                 }
             }
-            6 => responses.long_rest.1 = response,
-            7 => responses.long_rest.2 = response,
+            6 => responses.rest_type.1 = response,
+            7 => responses.rest_type.2 = response,
             _ => panic!("How did we get here?"),
         }
 
@@ -92,86 +98,32 @@ pub fn prompt(schedule_list: &mut ScheduleList) -> Option<ScheduleCreateResponse
     Some(responses)
 }
 
-pub fn convert(responses: ScheduleCreateResponses) -> Schedule {
-    let name = responses.name;
+//all ScheduleCreateResponses should be able to be converted into a Schedule
+fn convert_to_schedule(responses: &ScheduleCreateResponses) -> Schedule {
+    Schedule {
+        name: responses.name,
+        work_duration: format::hhmmss_to_dur(&responses.work_duration),
+        rest_duration: format::hhmmss_to_dur(&responses.rest_duration),
+        repeat_type: match &responses.repeat_type.0 {
+            &ScheduleCreateResponses::REPEAT_FINITE => RepeatType::Finite(responses.repeat_type.1.parse().expect("repeat_type.1 should be parseable to u32")),
+            &ScheduleCreateResponses::REPEAT_INFINITE => RepeatType::Infinite,
+            other => panic!("Could not convert '{other}' to Schedule repeat type"),
+        },
+        rest_type: match &responses.rest_type.0 {
+            &ScheduleCreateResponses::LONG_REST => RestType::LongRest {
+                blocks_per_long_rest: responses.rest_type.1.parse().unwrap(),
+                long_rest_duration: format::hhmmss_to_dur(&responses.rest_type.2),
+            },
+            &ScheduleCreateResponses::STANDARD_REST => RestType::Standard,
+            other => panic!("Could not convert '{other}' to Schedule rest type"),
+        }
+    }
 }
 
-pub fn start(schedule_list: &mut ScheduleList) {
-    println!("Which schedule would you like to start?");
-    println!("B: Back");
-
-    let response = {
-        let response = console::get_input_trimmed();
-
-        if response.eq_ignore_ascii_case("b") {
-            return;
-        }
-
-        response.parse().unwrap()
-    };
-
-    schedule_list.get(response).start();
-}
-
-const MODIFY_OPTIONS: [&str; 5] = [
-    "Change name",
-    "Change work/rest/long rest settings",
-    "Add or remove schedule duration",
-    "Delete schedule",
-    "Return to menu",
-];
-
-pub fn modify<L: Schedules>(schedule_list: &mut L) {
-    println!("Which schedule would you like to modify?");
-    schedule_list.display_list();
-
-    let response = console::get_input_trimmed().parse().unwrap();
-
-    let schedule = schedule_list.get(response);
-
-    loop {
-        console::clear();
-        println!("What would you like to change about {}?", schedule.name);
-
-        for (i, opt) in MODIFY_OPTIONS.iter().enumerate() {
-            println!("{i}: {opt}");
-        }
-
-        match console::get_input_trimmed().as_str() {
-            "0" => {
-                println!("What would you like to change it to?");
-                let (old_name, new_name) = (&schedule.name, console::get_input_trimmed()); 
-
-                println!("Successfully changed schedule name from {old_name} to {}.", &new_name);
-
-                let mut new_schedule = schedule.clone();
-                new_schedule.name = new_name;
-                
-                schedule_list.replace(response, new_schedule);
-
-                wait::for_secs(3);
-                break;
-            }
-            "1" => (),
-            "2" => (),
-            "3" => {
-                console::clear();
-                println!("Are you sure you want to delete schedule {}? (y/n)", schedule.name);
-
-                if &console::get_input_trimmed() == "y" {
-                    println!("Deleted {}", schedule.name);
-                    schedule_list.remove(response);
-                }
-
-                break;
-            }
-            "4" => break,
-            _ => {
-                println!("Invalid response, press any key to retry");
-                wait::for_ms(100);
-                console::wait_for_key_press();
-            }
-        }
+pub fn start(schedule_list: &mut ScheduleList) -> Option<Schedule> {
+    match prompt(schedule_list) {
+        Some(responses) => Some(schedule_list.push(convert_to_schedule(&responses))),
+        None => None,
     }
 }
 
@@ -180,46 +132,19 @@ pub fn modify<L: Schedules>(schedule_list: &mut L) {
 mod tests {
     use super::*;
     use std::slice::Iter;
-    
-    struct MockList(Vec<Schedule>);
-
-    impl MockList {
-        fn new() -> MockList {
-            MockList(Vec::new())
-        }
-    }
-
-    impl Schedules for MockList {
-        fn get(&self, index: usize) -> &Schedule {
-            &self.0[index]
-        }
-
-        fn push(&mut self, schedule: Schedule) {
-            self.0.push(schedule);
-        }
-
-        fn insert(&mut self, index: usize, schedule: Schedule) {
-            self.0.insert(index, schedule);
-        }
-
-        fn remove(&mut self, index: usize) {
-            self.0.remove(index);
-        }
-
-        fn replace(&mut self, index: usize, replacement: Schedule) {
-            self.0[index] = replacement;
-        }
-
-        fn iter(&self) -> Iter<'_, Schedule> {
-            self.0.iter()
-        }
-    }
 
     #[test]
-    #[should_panic]
-    fn schedules_should_be_prompt_created() {
-        let list = MockList::new();
+    fn schedules_should_save_to_file() {
+        let list = ScheduleList::new();
 
-        create(&mut)
+        let responses = ScheduleCreateResponses {
+            name: String::from("Test"),
+            work_duration: String::from("60:0"), 
+            rest_duration: String::from("0:1"),
+            repeat_type: (String::from(ScheduleCreateResponses::REPEAT_INFINITE), String::new()), 
+            rest_type: (ScheduleCreateResponses::LONG_REST, String::from("8"), String::from("2:0:0")),
+        };
+
+        
     }
 }
