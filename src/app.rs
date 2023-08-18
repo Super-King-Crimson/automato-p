@@ -1,65 +1,11 @@
-use crate::{
-    save_load,
-    schedule::{self, Schedule},
-    utils::console,
-};
+use std::{slice::{Iter, IterMut}, io::{BufWriter, self, Write}};
+use crate::{save_load, schedule::{self, Schedule}, utils::console};
 
-pub static mut SCHEDULES: Vec<Schedule> = vec![];
-
-pub fn start_schedule_n(n: usize) {
-    unsafe {
-        if n >= SCHEDULES.len() {
-            panic!("Schedule number {n} does not exist");
-        } else {
-            SCHEDULES[n].start();
-        }
-    }
+pub fn startup() -> ScheduleList {
+    ScheduleList(save_load::load_schedules())
 }
 
-pub fn get_schedule(n: usize) -> &'static Schedule {
-    unsafe {
-        if n >= SCHEDULES.len() {
-            panic!("Schedule number {n} does not exist");
-        } else {
-            &SCHEDULES[n]
-        }
-    }
-}
-
-pub fn display_schedules() {
-    unsafe {
-        for (i, schedule) in SCHEDULES.iter().enumerate() {
-            println!("{i}: {}", schedule.prompt_print());
-        }
-    }
-}
-
-pub fn startup() {
-    unsafe {
-        SCHEDULES = save_load::load_schedules();
-    }
-}
-
-pub fn remove_schedule(index: usize) {
-    unsafe {
-        SCHEDULES.remove(index);
-    }
-    save_load::delete_schedule(index);
-}
-
-pub fn replace_schedule(index: usize, schedule: Schedule) {
-    save_load::replace_schedule(index, &schedule);
-    unsafe {
-        SCHEDULES[index] = schedule;
-    }
-}
-
-pub fn add_schedule(schedule: Schedule) {
-    save_load::save_schedule(&schedule);
-    unsafe { SCHEDULES.push(schedule); }
-}
-
-pub fn run() {
+pub fn run(schedule_list: &mut ScheduleList) {
     console::clear();
 
     println!("Welcome to your automatic pomodoro timer!");
@@ -76,9 +22,61 @@ pub fn run() {
     console::clear();
 
     match input.parse() {
-        Ok(0_u8) => schedule::prompt::start(),
-        Ok(1) => schedule::prompt::create(),
-        Ok(2) => schedule::prompt::modify(),
+        Ok(0_u8) => schedule::prompt::start(schedule_list),
+        Ok(1) => schedule::prompt::create(schedule_list),
+        Ok(2) => schedule::prompt::modify(schedule_list),
         _ => panic!("invalid"),
     };
+}
+
+pub struct ScheduleList(Vec<Schedule>);
+impl ScheduleList {
+    pub fn get(&self, index: usize) -> &Schedule {
+        self.0.get(index).unwrap()
+    }
+
+    fn get_mut(&mut self, index: usize) -> &mut Schedule {
+        self.0.get_mut(index).unwrap()
+    }
+
+    pub fn start_schedule(&self, index: usize) {
+        self.0.get(index).unwrap().start();
+    }
+
+    pub fn push(&mut self, schedule: Schedule) {
+        self.0.push(schedule);
+    }
+
+    pub fn insert(&mut self, index: usize, schedule: Schedule) {
+        self.0.insert(index, schedule);
+    }
+
+    pub fn remove(&mut self, index: usize) {
+        save_load::delete_schedule(index);
+        self.0.remove(index);
+    }
+
+    pub fn replace(&mut self, index: usize, replacement: Schedule) {
+        save_load::replace_schedule(index, &replacement);
+        *self.get_mut(index) = replacement;
+    }
+
+    pub fn iter(&self) -> Iter<'_, Schedule> {
+        self.0.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> IterMut<'_, Schedule> {
+        self.0.iter_mut()
+    }
+
+    pub fn display_list(&self) {
+        //overly complicated because i can
+        let mut writer = BufWriter::new(io::stdout());
+
+        for (i, schedule) in self.iter().enumerate() {
+            write!(writer, "{i}: {}", schedule.get_details()).unwrap();
+        }
+
+        writer.flush().unwrap();
+    }
 }

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-pub fn dur_to_xhxmxs(dur: Duration) -> String {
+pub fn dur_to_xhxmxs(dur: Duration, ) -> String {
     let mut secs = dur.as_secs();
 
     let mut mins = secs / 60;

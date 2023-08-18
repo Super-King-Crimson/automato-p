@@ -1,5 +1,5 @@
 use std::{fs, io::{Write, BufWriter, BufRead, BufReader}};
-use super::schedule::Schedule;
+use crate::schedule::Schedule;
 
 const PATH_TO_FILE: &str = "./schedules.txt";
 

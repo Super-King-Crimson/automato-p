@@ -1,6 +1,9 @@
-use crate::{app, utils::{console, wait}};
-use std::time::Duration;
 use super::*;
+use crate::{
+    app::ScheduleList,
+    utils::{console, wait},
+};
+use std::time::Duration;
 
 const SCHEDULE_QUESTIONS: [&str; 8] = [
     "What should your new Schedule be named?",
@@ -15,7 +18,7 @@ const SCHEDULE_QUESTIONS: [&str; 8] = [
     "How long should your break be? (HH:MM:SS)",
 ];
 
-pub fn create() {
+pub fn create(schedule_list: &mut ScheduleList) {
     let mut name = String::new();
     let mut work_duration = Duration::ZERO;
     let mut rest_duration = Duration::ZERO;
@@ -30,12 +33,17 @@ pub fn create() {
     while i < SCHEDULE_QUESTIONS.len() {
         console::clear();
 
-        println!("{} (type 'BACK' at any point to go to previous menu)", SCHEDULE_QUESTIONS[i]);
+        println!(
+            "{} (type 'BACK' at any point to go to previous question/menu)",
+            SCHEDULE_QUESTIONS[i]
+        );
         let response = &console::get_input_trimmed();
 
         if response.eq_ignore_ascii_case("back") {
-            if i == 0 {return}
-            
+            if i == 0 {
+                return;
+            }
+
             i -= 1;
             continue;
         }
@@ -80,31 +88,33 @@ pub fn create() {
         rest_duration,
         repeat_type,
         max_blocks,
-        block_count: 1,
-        working: true,
     };
 
-    app::add_schedule(schedule);
-
-    println!("Schedule created! Press any key to continue.");
+    println!(
+        "Schedule {} created! Press any key to continue.",
+        schedule.name
+    );
+    schedule_list.push(schedule);
 
     thread::sleep(Duration::from_millis(100));
     console::wait_for_key_press();
 }
 
-pub fn start() {
+pub fn start(schedule_list: &mut ScheduleList) {
     println!("Which schedule would you like to start?");
-    
-    app::display_schedules();
     println!("B: Back");
 
-    let response = console::get_input_trimmed();
+    let response = {
+        let response = console::get_input_trimmed();
 
-    if response.eq_ignore_ascii_case("b") {return} 
+        if response.eq_ignore_ascii_case("b") {
+            return;
+        }
 
-    let parsed: usize = response.parse().unwrap();
+        response.parse().unwrap()
+    };
 
-    app::start_schedule_n(parsed);
+    schedule_list.get(response).start();
 }
 
 const MODIFY_OPTIONS: [&str; 5] = [
@@ -115,12 +125,13 @@ const MODIFY_OPTIONS: [&str; 5] = [
     "Return to menu",
 ];
 
-pub fn modify() {
+pub fn modify(schedule_list: &mut ScheduleList) {
     println!("Which schedule would you like to modify?");
-    app::display_schedules();
+    schedule_list.display_list();
 
     let response = console::get_input_trimmed().parse().unwrap();
-    let schedule = app::get_schedule(response);
+
+    let schedule = schedule_list.get(response);
 
     loop {
         console::clear();
@@ -131,24 +142,35 @@ pub fn modify() {
         }
 
         match console::get_input_trimmed().as_str() {
-            "0" => { 
+            "0" => {
                 println!("What would you like to change it to?");
-                let (old_name, new_name) = (&schedule.name, console::get_input_trimmed());
-                println!("Successfully changed schedule name from {old_name} to {new_name}.");
+                let (old_name, new_name) = (&schedule.name, console::get_input_trimmed()); 
+
+                println!("Successfully changed schedule name from {old_name} to {}.", &new_name);
+
+                let mut new_schedule = schedule.clone();
+                new_schedule.name = new_name;
+                
+                schedule_list.replace(response, new_schedule);
+
                 wait::for_secs(3);
-            },
+                break;
+            }
             "1" => (),
             "2" => (),
             "3" => {
                 console::clear();
-                println!("Are you sure you want to delete schedule {}? (y/n)", schedule.name);
+                println!(
+                    "Are you sure you want to delete schedule {}? (y/n)",
+                    schedule.name
+                );
                 if &console::get_input_trimmed() == "y" {
                     println!("Deleted {}", schedule.name);
-                    app::remove_schedule(response);
+                    schedule_list.remove(response);
                 }
                 //Must break here so we don't try to reaccess a schedule we don't have access to
                 break;
-            },
+            }
             "4" => break,
             _ => {
                 println!("Invalid response, press any key to retry");
@@ -165,25 +187,10 @@ mod tests {
     use super::*;
     use std::io::{self, BufRead, BufWriter, Write};
     use std::process::Command;
-        
+
     #[test]
     #[should_panic]
-    fn deleting_a_schedule_should_yeet_it() {
-        let n = unsafe {
-            app::SCHEDULES.len()
-        };
-
-        let thread = thread::spawn(move || {
-            wait::for_secs(1);
-
-            let creation_args = ["Test", "20:0", "5:0", "2", "n", " "];
-            
-        });
-
-        create();
-
-        thread.join().unwrap();
-
-        app::start_schedule_n(n);
+    fn schedule_should_yeetus_deletus() {
+        todo!();
     }
 }

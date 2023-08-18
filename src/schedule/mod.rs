@@ -5,7 +5,7 @@ use crate::utils::console;
 use std::{time::Duration, thread};
 use serde::{Serialize, Deserialize}; 
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RepeatType {
     LongRest {
         blocks_per_long_rest: u32,
@@ -14,13 +14,13 @@ pub enum RepeatType {
     Standard,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MaxBlocks {
     Infinite,
     Finite(u32),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Schedule {
     pub name: String,
     pub work_duration: Duration,
@@ -29,30 +29,15 @@ pub struct Schedule {
     pub repeat_type: RepeatType,
 
     pub max_blocks: MaxBlocks,
-
-    pub block_count: u32,
-    pub working: bool,
 }
 
+const QUARTER_SECOND: Duration = Duration::from_millis(250);
+const CONGRATS_TIME: Duration = Duration::from_millis(5000);
 impl Schedule {
-    pub fn pomodoro() -> Schedule {
-        Schedule {
-            name: String::from("Pomodoro"),
-            
-            work_duration: Duration::from_secs(2),
-            rest_duration: Duration::from_secs(1),
-
-            repeat_type: RepeatType::LongRest { blocks_per_long_rest: 4, long_rest_duration: Duration::from_secs(2) },
-            max_blocks: MaxBlocks::Finite(8),
-
-            block_count: 1,
-            working: true,
-        }
-    }
-
-    pub fn start(&mut self) {
+    pub fn start(&self) {
         let mut dur = self.work_duration;
-        let quarter_second = Duration::from_millis(250);
+        let mut working = true;
+        let mut block_count = 1;
 
         console::clear();
         console::hide_cursor();
@@ -64,33 +49,32 @@ impl Schedule {
             print!("{}", format::dur_to_hhmmss(dur));
             console::flush();
 
-            thread::sleep(quarter_second);
+            thread::sleep(QUARTER_SECOND);
             
-            //TODO: try to fix this so it displays the initial time for 0.75 secs, and 0:00 for 0.25 secs
-            match dur.checked_sub(2 * quarter_second) {
-                Some(new_dur) => dur = new_dur + quarter_second,
+            match dur.checked_sub(2 * QUARTER_SECOND) {
+                Some(new_dur) => dur = new_dur + QUARTER_SECOND,
                 None => {
-                    self.working = !self.working;
+                    working = !working;
                     console::clear();
 
-                    if self.working {
-                        println!("Working block {}", self.block_count);
+                    if working {
+                        println!("Working block {}", block_count);
                         dur = self.work_duration;
                     } else {
-                        self.block_count += 1;
+                        block_count += 1;
 
                         if let MaxBlocks::Finite(repeats) = self.max_blocks {
-                            if self.block_count > repeats {
+                            if block_count > repeats {
                                 println!("Congratulations, you've completed your schedule! 🎉🎉🎉");
-                                thread::sleep(Duration::from_secs(5));
+                                thread::sleep(CONGRATS_TIME);
                                 break;
                             }
                         }
 
                         if let RepeatType::LongRest { blocks_per_long_rest, long_rest_duration } = self.repeat_type {
-                            if self.block_count % blocks_per_long_rest == 1 && self.block_count != 1 {
+                            if block_count % blocks_per_long_rest == 1 && block_count != 1 {
                                 println!("Congratulations on completing {} blocks! Here's a deserved long break:",
-                                    if self.block_count == blocks_per_long_rest { blocks_per_long_rest.to_string() } 
+                                    if block_count == blocks_per_long_rest { blocks_per_long_rest.to_string() } 
                                     else { format!("another {blocks_per_long_rest}") }
                                 );
                                 
@@ -102,7 +86,7 @@ impl Schedule {
                         
                         dur = self.rest_duration;
 
-                        println!("Rest block {}", self.block_count - 1);
+                        println!("Rest block {}", block_count - 1);
                     }
 
                     
@@ -130,7 +114,7 @@ impl Schedule {
         }
     }
 
-    pub fn prompt_print(&self) -> String {
+    pub fn get_details(&self) -> String {
         format!("{name}: {work_dur} work, {rest_dur} rest{repeat_type_details}{max_blocks_details}", 
             name = self.name,
             work_dur = format::dur_to_xhxmxs(self.work_duration),
@@ -146,5 +130,73 @@ impl Schedule {
                 _ => String::new(),
             }
         )
+    }
+}
+
+#[cfg(test)]
+#[allow(unused_imports, dead_code)]
+mod tests {
+    use std::time::SystemTime;
+
+    use super::*;
+
+    fn dur_close_enough(dur1: Duration, dur2: Duration, threshold_ms: u128) -> bool {
+        let ms1 = dur1.as_millis();
+        let ms2 = dur2.as_millis();
+
+        ms2.abs_diff(ms1) < threshold_ms
+    }
+
+    fn pomodoro() -> Schedule {
+        Schedule { 
+            name: String::from("Pomodoro"), 
+            work_duration: Duration::from_secs(25*60), 
+            rest_duration: Duration::from_secs(5*60), 
+            repeat_type: RepeatType::LongRest { blocks_per_long_rest: 4, long_rest_duration: Duration::from_secs(30*60) }, 
+            max_blocks: MaxBlocks::Finite(8),
+        }
+    }
+
+    fn test() -> Schedule {
+        Schedule { 
+            name: String::from("test"), 
+            work_duration: Duration::from_secs(1), 
+            rest_duration: Duration::from_secs(1), 
+            repeat_type: RepeatType::Standard,
+            max_blocks: MaxBlocks::Infinite,
+        }
+    }
+    
+    fn test_bounded() -> Schedule {
+        let mut test = test();
+        test.max_blocks = MaxBlocks::Finite(2);
+
+        test
+    }
+
+    #[test]
+    fn schedule_should_last_close_to_its_duration() {
+        let schedule = test_bounded();
+        let schedule_duration = schedule.get_total_duration().unwrap() + CONGRATS_TIME;
+
+        //I aint tryna wait that long
+        assert!(schedule_duration.as_millis() < 10000, "actual duration was {}", schedule_duration.as_millis());
+
+        let before = SystemTime::now();
+        
+        thread::spawn(move || {
+            schedule.start();
+        }).join().unwrap();
+
+        let passed_time = {
+            let now = SystemTime::now();
+            now.duration_since(before).unwrap()
+        };
+
+        assert!(dur_close_enough(
+            passed_time,
+            schedule_duration,
+            1000
+        ), "passed_time: {passed_time:?}, duration: {schedule_duration:?}");
     }
 }
