@@ -2,7 +2,7 @@ pub mod prompt;
 mod format;
 
 use crate::utils::console;
-use std::{time::Duration, thread};
+use std::{time::Duration, thread, fmt::Display};
 use serde::{Serialize, Deserialize}; 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -113,9 +113,12 @@ impl Schedule {
             MaxBlocks::Infinite => None,
         }
     }
+}
 
-    pub fn get_details(&self) -> String {
-        format!("{name}: {work_dur} work, {rest_dur} rest{repeat_type_details}{max_blocks_details}", 
+impl Display for Schedule {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{name}: {work_dur} work, {rest_dur} rest{repeat_type_details}{max_blocks_details}",
+        
             name = self.name,
             work_dur = format::dur_to_xhxmxs(self.work_duration),
             rest_dur = format::dur_to_xhxmxs(self.rest_duration),

@@ -1,5 +1,10 @@
-use std::{slice::{Iter, IterMut}, io::{BufWriter, self, Write}};
-use crate::{save_load, schedule::{self, Schedule}, utils::console};
+use std::slice::Iter;
+use crate::{
+    save_load, 
+    schedule::{self, Schedule}, 
+    utils::console,
+    prompts::{create_schedule, modify_schedule, start_schedule},
+};
 
 pub fn startup() -> ScheduleList {
     ScheduleList(save_load::load_schedules())
@@ -30,53 +35,59 @@ pub fn run(schedule_list: &mut ScheduleList) {
 }
 
 pub struct ScheduleList(Vec<Schedule>);
-impl ScheduleList {
-    pub fn get(&self, index: usize) -> &Schedule {
-        self.0.get(index).unwrap()
-    }
 
+impl ScheduleList {
     fn get_mut(&mut self, index: usize) -> &mut Schedule {
         self.0.get_mut(index).unwrap()
     }
+}
 
-    pub fn start_schedule(&self, index: usize) {
-        self.0.get(index).unwrap().start();
+impl Schedules for ScheduleList {
+    fn get(&self, index: usize) -> &Schedule {
+        self.0.get(index).unwrap()
     }
 
-    pub fn push(&mut self, schedule: Schedule) {
+    fn push(&mut self, schedule: Schedule) {
         self.0.push(schedule);
     }
 
-    pub fn insert(&mut self, index: usize, schedule: Schedule) {
+    fn insert(&mut self, index: usize, schedule: Schedule) {
         self.0.insert(index, schedule);
     }
 
-    pub fn remove(&mut self, index: usize) {
+    fn remove(&mut self, index: usize) {
         save_load::delete_schedule(index);
         self.0.remove(index);
     }
 
-    pub fn replace(&mut self, index: usize, replacement: Schedule) {
+    fn replace(&mut self, index: usize, replacement: Schedule) {
         save_load::replace_schedule(index, &replacement);
         *self.get_mut(index) = replacement;
     }
 
-    pub fn iter(&self) -> Iter<'_, Schedule> {
+    fn iter(&self) -> Iter<'_, Schedule> {
         self.0.iter()
     }
+}
 
-    pub fn iter_mut(&mut self) -> IterMut<'_, Schedule> {
-        self.0.iter_mut()
+pub trait Schedules {
+    fn get(&self, index: usize) -> &Schedule;
+
+    fn push(&mut self, schedule: Schedule);
+
+    fn insert(&mut self, index: usize, schedule: Schedule);
+
+    fn remove(&mut self, index: usize);
+
+    fn replace(&mut self, index: usize, replacement: Schedule);
+
+    fn iter(&self) -> Iter<'_, Schedule>;
+        
+    fn start_schedule(&self, index: usize) {
+        self.get(index).start();
     }
 
-    pub fn display_list(&self) {
-        //overly complicated because i can
-        let mut writer = BufWriter::new(io::stdout());
-
-        for (i, schedule) in self.iter().enumerate() {
-            write!(writer, "{i}: {}", schedule.get_details()).unwrap();
-        }
-
-        writer.flush().unwrap();
+    fn display_list(&self) {
+        self.iter().enumerate().for_each(|(i, sch)| println!("{i}: {sch}"));
     }
 }

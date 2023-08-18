@@ -1,9 +1,24 @@
-use super::*;
 use crate::{
-    app::ScheduleList,
+    app::{ScheduleList, Schedules},
     utils::{console, wait},
 };
 use std::time::Duration;
+
+struct ScheduleCreateResponses {
+    name: String,
+    work_duration: String,
+    rest_duration: String,
+    max_blocks: String,
+    blocks_per_long_rest: String,
+    long_rest_duration: String,
+    repeat_type: String,
+}
+
+impl ScheduleCreateResponses {
+    fn new() -> ScheduleCreateResponses {
+        ScheduleCreateResponses { name: String::new(), work_duration: String::new(), rest_duration: String::new(), max_blocks: String::new(), blocks_per_long_rest: String::new(), long_rest_duration: String::new(), repeat_type: String::new() }
+    }
+}
 
 const SCHEDULE_QUESTIONS: [&str; 8] = [
     "What should your new Schedule be named?",
@@ -19,15 +34,7 @@ const SCHEDULE_QUESTIONS: [&str; 8] = [
 ];
 
 pub fn create(schedule_list: &mut ScheduleList) {
-    let mut name = String::new();
-    let mut work_duration = Duration::ZERO;
-    let mut rest_duration = Duration::ZERO;
-
-    let mut max_blocks = MaxBlocks::Infinite;
-
-    let mut blocks_per_long_rest = 0u32;
-    let mut long_rest_duration;
-    let mut repeat_type = RepeatType::Standard;
+    let mut responses = ScheduleCreateResponses::new();
 
     let mut i = 0;
     while i < SCHEDULE_QUESTIONS.len() {
@@ -37,7 +44,7 @@ pub fn create(schedule_list: &mut ScheduleList) {
             "{} (type 'BACK' at any point to go to previous question/menu)",
             SCHEDULE_QUESTIONS[i]
         );
-        let response = &console::get_input_trimmed();
+        let response = console::get_input_trimmed();
 
         if response.eq_ignore_ascii_case("back") {
             if i == 0 {
@@ -50,8 +57,8 @@ pub fn create(schedule_list: &mut ScheduleList) {
 
         #[allow(unused)]
         match i {
-            0 => name.push_str(response.trim()),
-            1 => work_duration = format::hhmmss_to_dur(response),
+            0 => responses.name = response,
+            1 => responses.work_duration = format::hhmmss_to_dur(response),
             2 => rest_duration = format::hhmmss_to_dur(response),
             3 => {
                 if response.eq("2") {
@@ -125,7 +132,7 @@ const MODIFY_OPTIONS: [&str; 5] = [
     "Return to menu",
 ];
 
-pub fn modify(schedule_list: &mut ScheduleList) {
+pub fn modify<L: Schedules>(schedule_list: &mut L) {
     println!("Which schedule would you like to modify?");
     schedule_list.display_list();
 
@@ -160,15 +167,13 @@ pub fn modify(schedule_list: &mut ScheduleList) {
             "2" => (),
             "3" => {
                 console::clear();
-                println!(
-                    "Are you sure you want to delete schedule {}? (y/n)",
-                    schedule.name
-                );
+                println!("Are you sure you want to delete schedule {}? (y/n)", schedule.name);
+
                 if &console::get_input_trimmed() == "y" {
                     println!("Deleted {}", schedule.name);
                     schedule_list.remove(response);
                 }
-                //Must break here so we don't try to reaccess a schedule we don't have access to
+
                 break;
             }
             "4" => break,
@@ -185,12 +190,47 @@ pub fn modify(schedule_list: &mut ScheduleList) {
 #[allow(unused_imports)]
 mod tests {
     use super::*;
-    use std::io::{self, BufRead, BufWriter, Write};
-    use std::process::Command;
+    use std::slice::Iter;
+    
+    struct MockList(Vec<Schedule>);
+
+    impl MockList {
+        fn new() -> MockList {
+            MockList(Vec::new())
+        }
+    }
+
+    impl Schedules for MockList {
+        fn get(&self, index: usize) -> &Schedule {
+            &self.0[index]
+        }
+
+        fn push(&mut self, schedule: Schedule) {
+            self.0.push(schedule);
+        }
+
+        fn insert(&mut self, index: usize, schedule: Schedule) {
+            self.0.insert(index, schedule);
+        }
+
+        fn remove(&mut self, index: usize) {
+            self.0.remove(index);
+        }
+
+        fn replace(&mut self, index: usize, replacement: Schedule) {
+            self.0[index] = replacement;
+        }
+
+        fn iter(&self) -> Iter<'_, Schedule> {
+            self.0.iter()
+        }
+    }
 
     #[test]
     #[should_panic]
-    fn schedule_should_yeetus_deletus() {
-        todo!();
+    fn schedules_should_be_prompt_created() {
+        let list = MockList::new();
+
+        create(&mut)
     }
 }
