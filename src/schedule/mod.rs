@@ -35,7 +35,7 @@ pub struct Schedule {
 }
 
 impl Schedule {
-    pub fn default() -> Schedule {
+    pub fn pomodoro() -> Schedule {
         Schedule {
             name: String::from("Pomodoro"),
             

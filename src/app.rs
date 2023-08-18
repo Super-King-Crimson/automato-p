@@ -4,7 +4,7 @@ use crate::{
     utils::console,
 };
 
-static mut SCHEDULES: Vec<Schedule> = vec![];
+pub static mut SCHEDULES: Vec<Schedule> = vec![];
 
 pub fn start_schedule_n(n: usize) {
     unsafe {
@@ -16,12 +16,12 @@ pub fn start_schedule_n(n: usize) {
     }
 }
 
-pub fn get_schedule(n: usize) -> &'static mut Schedule {
+pub fn get_schedule(n: usize) -> &'static Schedule {
     unsafe {
         if n >= SCHEDULES.len() {
             panic!("Schedule number {n} does not exist");
         } else {
-            &mut SCHEDULES[n]
+            &SCHEDULES[n]
         }
     }
 }
@@ -44,10 +44,19 @@ pub fn remove_schedule(index: usize) {
     unsafe {
         SCHEDULES.remove(index);
     }
+    save_load::delete_schedule(index);
+}
+
+pub fn replace_schedule(index: usize, schedule: Schedule) {
+    save_load::replace_schedule(index, &schedule);
+    unsafe {
+        SCHEDULES[index] = schedule;
+    }
 }
 
 pub fn add_schedule(schedule: Schedule) {
-    unsafe { SCHEDULES.push(schedule) }
+    save_load::save_schedule(&schedule);
+    unsafe { SCHEDULES.push(schedule); }
 }
 
 pub fn run() {

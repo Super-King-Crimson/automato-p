@@ -1,6 +1,5 @@
 use std::{fs, io::{Write, BufWriter, BufRead, BufReader}};
 use super::schedule::Schedule;
-use crate::app;
 
 const PATH_TO_FILE: &str = "./schedules.txt";
 
@@ -14,16 +13,52 @@ fn read_schedules_from_file() -> Vec<Schedule> {
 fn write_schedule_to_file(data: &Schedule) {
     let mut json = serde_json::to_string(data).unwrap();
     json.push('\n');
-    let mut file = BufWriter::new(
-        fs::OpenOptions::new().write(true).append(true).open(PATH_TO_FILE).unwrap());
-    file.write(json.as_bytes()).unwrap();
 
+    let file = fs::OpenOptions::new().write(true).append(true).open(PATH_TO_FILE).unwrap();
+    let mut file = BufWriter::new(file);
+
+    file.write_all(json.as_bytes()).unwrap();
     file.flush().unwrap();
 }
 
-pub fn save_schedule(schedule: Schedule) {
-    write_schedule_to_file(&schedule);
-    app::add_schedule(schedule);
+pub fn delete_schedule(index: usize) {
+    let file = fs::OpenOptions::new().read(true).write(true).open(PATH_TO_FILE).unwrap();
+    let reader = BufReader::new(&file);
+    
+    let mut new_contents = String::new();
+
+    for (i, line) in reader.lines().enumerate() {
+        if i != index {
+            new_contents.push_str(&line.unwrap());
+        }
+    }
+
+    let mut writer = BufWriter::new(&file);
+    writer.write_all(new_contents.as_bytes()).unwrap();
+    writer.flush().unwrap();
+}
+
+pub fn replace_schedule(index: usize, replacement: &Schedule) {
+    let file = fs::OpenOptions::new().read(true).write(true).open(PATH_TO_FILE).unwrap();
+    let reader = BufReader::new(&file);
+    
+    let mut new_contents = String::new();
+
+    for (i, line) in reader.lines().enumerate() {
+        if i != index {
+            new_contents.push_str(&line.unwrap());
+        } else {
+            new_contents.push_str(&serde_json::to_string(replacement).unwrap())
+        }
+    }
+
+    let mut writer = BufWriter::new(&file);
+    writer.write_all(new_contents.as_bytes()).unwrap();
+    writer.flush().unwrap();
+}
+
+pub fn save_schedule(schedule: &Schedule) {
+    write_schedule_to_file(schedule);
 }
 
 pub fn load_schedules() -> Vec<Schedule> {

@@ -1,8 +1,6 @@
-use crate::{save_load, utils::{console, wait}};
+use crate::{app, utils::{console, wait}};
 use std::time::Duration;
-
 use super::*;
-use crate::app;
 
 const SCHEDULE_QUESTIONS: [&str; 8] = [
     "What should your new Schedule be named?",
@@ -32,8 +30,15 @@ pub fn create() {
     while i < SCHEDULE_QUESTIONS.len() {
         console::clear();
 
-        println!("{}", SCHEDULE_QUESTIONS[i]);
+        println!("{} (type 'BACK' at any point to go to previous menu)", SCHEDULE_QUESTIONS[i]);
         let response = &console::get_input_trimmed();
+
+        if response.eq_ignore_ascii_case("back") {
+            if i == 0 {return}
+            
+            i -= 1;
+            continue;
+        }
 
         #[allow(unused)]
         match i {
@@ -41,27 +46,23 @@ pub fn create() {
             1 => work_duration = format::hhmmss_to_dur(response),
             2 => rest_duration = format::hhmmss_to_dur(response),
             3 => {
-                if response.eq("1") {
-                    ()
-                } else if response.eq("2") {
+                if response.eq("2") {
                     i += 1;
-                } else {
+                } else if !response.eq("1") {
                     panic!("brother you have entered an invalid character");
                 }
             }
             4 => max_blocks = MaxBlocks::Finite(response.parse().unwrap()),
             5 => {
-                if response.eq_ignore_ascii_case("y") {
-                    ()
-                } else if response.eq_ignore_ascii_case("n") {
+                if response.eq_ignore_ascii_case("n") {
                     i += 2;
-                } else {
+                } else if !response.eq("y") {
                     panic!("brother you have entered an invalid character");
                 }
             }
             6 => blocks_per_long_rest = response.trim().parse().unwrap(),
             7 => {
-                long_rest_duration = format::hhmmss_to_dur(&response.trim());
+                long_rest_duration = format::hhmmss_to_dur(response.trim());
                 repeat_type = RepeatType::LongRest {
                     blocks_per_long_rest,
                     long_rest_duration,
@@ -83,7 +84,7 @@ pub fn create() {
         working: true,
     };
 
-    save_load::save_schedule(schedule);
+    app::add_schedule(schedule);
 
     println!("Schedule created! Press any key to continue.");
 
@@ -93,9 +94,14 @@ pub fn create() {
 
 pub fn start() {
     println!("Which schedule would you like to start?");
+    
     app::display_schedules();
+    println!("B: Back");
 
     let response = console::get_input_trimmed();
+
+    if response.eq_ignore_ascii_case("b") {return} 
+
     let parsed: usize = response.parse().unwrap();
 
     app::start_schedule_n(parsed);
@@ -113,36 +119,71 @@ pub fn modify() {
     println!("Which schedule would you like to modify?");
     app::display_schedules();
 
-    let response = console::get_input_trimmed();
-    let parsed: usize = response.parse().unwrap();
-
-    let schedule = app::get_schedule(parsed);
+    let response = console::get_input_trimmed().parse().unwrap();
+    let schedule = app::get_schedule(response);
 
     loop {
         console::clear();
         println!("What would you like to change about {}?", schedule.name);
 
-        for i in 0..MODIFY_OPTIONS.len() {
-            println!("{i}: {}", MODIFY_OPTIONS[i]);
+        for (i, opt) in MODIFY_OPTIONS.iter().enumerate() {
+            println!("{i}: {opt}");
         }
 
         match console::get_input_trimmed().as_str() {
-            "0" => {
+            "0" => { 
                 println!("What would you like to change it to?");
-                let (old_name, new_name) = (schedule.name.clone(), console::get_input_trimmed());
-                schedule.name = new_name.clone(); 
+                let (old_name, new_name) = (&schedule.name, console::get_input_trimmed());
                 println!("Successfully changed schedule name from {old_name} to {new_name}.");
                 wait::for_secs(3);
             },
             "1" => (),
             "2" => (),
-            "3" => (),
+            "3" => {
+                console::clear();
+                println!("Are you sure you want to delete schedule {}? (y/n)", schedule.name);
+                if &console::get_input_trimmed() == "y" {
+                    println!("Deleted {}", schedule.name);
+                    app::remove_schedule(response);
+                }
+                //Must break here so we don't try to reaccess a schedule we don't have access to
+                break;
+            },
             "4" => break,
             _ => {
-                println!("Invalid character, press any key to retry");
+                println!("Invalid response, press any key to retry");
                 wait::for_ms(100);
                 console::wait_for_key_press();
             }
         }
+    }
+}
+
+#[cfg(test)]
+#[allow(unused_imports)]
+mod tests {
+    use super::*;
+    use std::io::{self, BufRead, BufWriter, Write};
+    use std::process::Command;
+        
+    #[test]
+    #[should_panic]
+    fn deleting_a_schedule_should_yeet_it() {
+        let n = unsafe {
+            app::SCHEDULES.len()
+        };
+
+        let thread = thread::spawn(move || {
+            wait::for_secs(1);
+
+            let creation_args = ["Test", "20:0", "5:0", "2", "n", " "];
+            
+        });
+
+        create();
+
+        thread.join().unwrap();
+
+        app::start_schedule_n(n);
     }
 }

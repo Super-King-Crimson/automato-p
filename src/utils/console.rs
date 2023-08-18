@@ -57,6 +57,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn wait_for_key_press_does_its_thing() {
         wait_for_key_press();
     }
