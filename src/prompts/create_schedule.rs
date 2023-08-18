@@ -1,22 +1,26 @@
 use crate::{
     app::{ScheduleList, Schedules},
-    utils::{console, wait},
+    utils::{console, wait}, 
+    schedule::Schedule,
 };
-use std::time::Duration;
 
 struct ScheduleCreateResponses {
     name: String,
     work_duration: String,
     rest_duration: String,
-    max_blocks: String,
-    blocks_per_long_rest: String,
-    long_rest_duration: String,
-    repeat_type: String,
+    repeat_type: (String, String),
+    long_rest: (String, String, String),
 }
 
 impl ScheduleCreateResponses {
     fn new() -> ScheduleCreateResponses {
-        ScheduleCreateResponses { name: String::new(), work_duration: String::new(), rest_duration: String::new(), max_blocks: String::new(), blocks_per_long_rest: String::new(), long_rest_duration: String::new(), repeat_type: String::new() }
+        ScheduleCreateResponses { 
+            name: String::new(),
+            work_duration: String::new(),
+            rest_duration: String::new(),
+            repeat_type: (String::new(), String::new()),
+            long_rest: (String::new(), String::new(), String::new()),
+        }
     }
 }
 
@@ -33,78 +37,63 @@ const SCHEDULE_QUESTIONS: [&str; 8] = [
     "How long should your break be? (HH:MM:SS)",
 ];
 
-pub fn create(schedule_list: &mut ScheduleList) {
+pub fn prompt(schedule_list: &mut ScheduleList) -> Option<ScheduleCreateResponses> {
     let mut responses = ScheduleCreateResponses::new();
 
     let mut i = 0;
     while i < SCHEDULE_QUESTIONS.len() {
         console::clear();
 
-        println!(
-            "{} (type 'BACK' at any point to go to previous question/menu)",
-            SCHEDULE_QUESTIONS[i]
-        );
+        println!("{} (type 'BACK' at any point to go to previous question/menu)", SCHEDULE_QUESTIONS[i]);
         let response = console::get_input_trimmed();
 
         if response.eq_ignore_ascii_case("back") {
             if i == 0 {
-                return;
+                return None;
+            } else {
+                i -= 1;
+                continue;
             }
-
-            i -= 1;
-            continue;
         }
 
-        #[allow(unused)]
         match i {
             0 => responses.name = response,
-            1 => responses.work_duration = format::hhmmss_to_dur(response),
-            2 => rest_duration = format::hhmmss_to_dur(response),
+            1 => responses.work_duration = response,
+            2 => responses.rest_duration = response,
             3 => {
-                if response.eq("2") {
+                if response.eq("1") {
+                    responses.repeat_type.0 = String::from("finite");
+                } else if response.eq("2") {
+                    responses.repeat_type.0 = String::from("infinite");
                     i += 1;
-                } else if !response.eq("1") {
-                    panic!("brother you have entered an invalid character");
+                } else {
+                    panic!("Invalid response: must be 1 or 2");
                 }
             }
-            4 => max_blocks = MaxBlocks::Finite(response.parse().unwrap()),
+            4 => responses.repeat_type.1 = response,
             5 => {
-                if response.eq_ignore_ascii_case("n") {
+                if response.eq_ignore_ascii_case("y") {
+                    responses.long_rest.0 = String::from("yes");
+                } else if response.eq_ignore_ascii_case("n") {
+                    responses.long_rest.0 = String::from("no");
                     i += 2;
-                } else if !response.eq("y") {
-                    panic!("brother you have entered an invalid character");
+                } else {
+                    panic!("Invalid response: y or n");
                 }
             }
-            6 => blocks_per_long_rest = response.trim().parse().unwrap(),
-            7 => {
-                long_rest_duration = format::hhmmss_to_dur(response.trim());
-                repeat_type = RepeatType::LongRest {
-                    blocks_per_long_rest,
-                    long_rest_duration,
-                };
-            }
+            6 => responses.long_rest.1 = response,
+            7 => responses.long_rest.2 = response,
             _ => panic!("How did we get here?"),
         }
 
         i += 1;
     }
 
-    let schedule = Schedule {
-        name,
-        work_duration,
-        rest_duration,
-        repeat_type,
-        max_blocks,
-    };
+    Some(responses)
+}
 
-    println!(
-        "Schedule {} created! Press any key to continue.",
-        schedule.name
-    );
-    schedule_list.push(schedule);
-
-    thread::sleep(Duration::from_millis(100));
-    console::wait_for_key_press();
+pub fn convert(responses: ScheduleCreateResponses) -> Schedule {
+    let name = responses.name;
 }
 
 pub fn start(schedule_list: &mut ScheduleList) {
