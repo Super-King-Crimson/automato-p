@@ -1,7 +1,6 @@
 use crate::{
-    app::ScheduleList,
+    app::{ScheduleList, console},
     schedule::{format, RepeatType, RestType, Schedule},
-    utils::console,
 };
 
 enum RepeatTypeResponse {

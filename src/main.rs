@@ -1,11 +1,11 @@
 pub mod app; 
-pub mod save_load;
-pub mod utils;
 pub mod schedule;
 pub mod prompts;
 
+use app::save_load::SCHEDULE_PATH;
+
 fn main() {
-    let mut schedules = app::startup(save_load::SCHEDULE_PATH).unwrap();
+    let mut schedules = app::startup(SCHEDULE_PATH.to_string()).unwrap();
 
     loop {
         app::run(&mut schedules);

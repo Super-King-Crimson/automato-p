@@ -1,7 +1,7 @@
 use std::{iter::Iterator, fs::{self, OpenOptions}, io::{Write, BufWriter, BufRead, BufReader}, path::PathBuf};
 use crate::schedule::Schedule;
 
-pub const SCHEDULE_PATH: String = String::from("schedules.txt");
+pub const SCHEDULE_PATH: &str = "schedules.txt";
 
 pub struct SaveLoad {
     path: PathBuf
@@ -9,7 +9,7 @@ pub struct SaveLoad {
 
 impl SaveLoad {
     pub fn try_from(path: String) -> Result<SaveLoad, std::io::Error> {
-        match fs::metadata(path) {
+        match fs::metadata(&path) {
             Ok(_) => Ok(SaveLoad { path: path.into() }),
             Err(e) => Err(e),
         }
@@ -20,7 +20,7 @@ impl SaveLoad {
     }
 
     pub fn append_schedule(&self, schedule: &Schedule) {
-        let file = OpenOptions::new().write(true).append(true).open(self.path).unwrap();
+        let file = OpenOptions::new().write(true).append(true).open(&self.path).unwrap();
         let mut writer = BufWriter::new(file);
 
         let mut json = serde_json::to_string(schedule).unwrap();
@@ -41,7 +41,7 @@ impl SaveLoad {
             contents.push_str(&line);
         }
 
-        OpenOptions::new().write(true).open(&self.path).unwrap().write_all(contents.as_bytes());
+        OpenOptions::new().write(true).open(&self.path).unwrap().write_all(contents.as_bytes()).unwrap();
     }
 
     pub fn remove_schedule(&self, index: usize) {
@@ -55,7 +55,7 @@ impl SaveLoad {
             }
         }
 
-        OpenOptions::new().append(true).open(&self.path).unwrap().write_all(contents.as_bytes());
+        OpenOptions::new().append(true).open(&self.path).unwrap().write_all(contents.as_bytes()).unwrap();
     }
 
     pub fn replace_schedule(&self, index: usize, replacement: &Schedule) {
@@ -69,7 +69,7 @@ impl SaveLoad {
             }
         }
 
-        OpenOptions::new().write(true).open(&self.path).unwrap().write_all(contents.as_bytes());
+        OpenOptions::new().write(true).open(&self.path).unwrap().write_all(contents.as_bytes()).unwrap();
     }
 
     fn iter_lines(&self) -> impl Iterator<Item = String> {

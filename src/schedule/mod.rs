@@ -1,6 +1,6 @@
 pub mod format;
 
-use crate::utils::console;
+use crate::app::console;
 use std::{time::Duration, thread, fmt::Display};
 use serde::{Serialize, Deserialize}; 
 

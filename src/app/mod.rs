@@ -1,10 +1,12 @@
+pub mod save_load;
+pub mod console;
+
 use std::{io, slice::Iter};
 use crate::{
-    save_load::SaveLoad, 
-    schedule::Schedule, 
-    utils::console,
+    schedule::Schedule,
     prompts,
 };
+use save_load::SaveLoad;
 
 pub struct ScheduleList {
     list: Vec<Schedule>, 
