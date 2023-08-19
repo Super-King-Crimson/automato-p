@@ -83,8 +83,8 @@ pub fn run(schedule_list: &mut ScheduleList) {
     console::clear();
 
     match input.parse() {
-        Ok(0_u8) => todo!() /* prompts::start_schedule::start(schedule_list) */,
-        Ok(1) => prompts::create_schedule::start(schedule_list),
+        Ok(0_u8) => prompts::start_schedule::start(schedule_list),
+        Ok(1) => prompts::create_schedule::start(schedule_list).unwrap_or(()),
         Ok(2) => todo!(),
         _ => panic!("invalid"),
     };
