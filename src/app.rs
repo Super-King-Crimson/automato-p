@@ -1,20 +1,24 @@
-use std::slice::Iter;
+use std::{io, slice::Iter};
 use crate::{
-    save_load, 
+    save_load::SaveLoad, 
     schedule::Schedule, 
     utils::console,
     prompts,
 };
 
-pub struct ScheduleList(Vec<Schedule>);
+pub struct ScheduleList {
+    list: Vec<Schedule>, 
+    save_load: SaveLoad,
+}
 
 impl ScheduleList {
-    fn get_mut(&mut self, index: usize) -> &mut Schedule {
-        self.0.get_mut(index).unwrap()
-    }
+    pub fn try_from(path_to_file: String) -> Result<ScheduleList, io::Error> {
+        let save_load = SaveLoad::try_from(path_to_file)?;
 
-    pub fn new() -> ScheduleList {
-        ScheduleList(Vec::new())
+        Ok(ScheduleList {
+            list: save_load.read_schedules(),
+            save_load
+        })
     }
 
     pub fn start_schedule(&self, index: usize) {
@@ -26,34 +30,38 @@ impl ScheduleList {
     }
     
     pub fn get(&self, index: usize) -> &Schedule {
-        self.0.get(index).unwrap()
+        self.list.get(index).unwrap()
     }
 
     pub fn push(&mut self, schedule: Schedule) {
-        self.0.push(schedule);
+        self.list.push(schedule);
     }
 
     pub fn insert(&mut self, index: usize, schedule: Schedule) {
-        self.0.insert(index, schedule);
+        self.list.insert(index, schedule);
     }
 
     pub fn remove(&mut self, index: usize) {
-        save_load::delete_schedule(index);
-        self.0.remove(index);
+        self.save_load.remove_schedule(index);
+        self.list.remove(index);
     }
 
     pub fn replace(&mut self, index: usize, replacement: Schedule) {
-        save_load::replace_schedule(index, &replacement);
+        self.save_load.replace_schedule(index, &replacement);
         *self.get_mut(index) = replacement;
     }
 
     pub fn iter(&self) -> Iter<'_, Schedule> {
-        self.0.iter()
+        self.list.iter()
+    }
+
+    fn get_mut(&mut self, index: usize) -> &mut Schedule {
+        self.list.get_mut(index).unwrap()
     }
 }
 
-pub fn startup() -> ScheduleList {
-    ScheduleList(save_load::load_schedules())
+pub fn startup(schedule_file: String) -> Result<ScheduleList, io::Error> {
+    ScheduleList::try_from(schedule_file)
 }
 
 pub fn run(schedule_list: &mut ScheduleList) {
@@ -73,7 +81,7 @@ pub fn run(schedule_list: &mut ScheduleList) {
     console::clear();
 
     match input.parse() {
-        Ok(0_u8) => prompts::start_schedule::start(schedule_list),
+        Ok(0_u8) => todo!() /* prompts::start_schedule::start(schedule_list) */,
         Ok(1) => prompts::create_schedule::start(schedule_list),
         Ok(2) => todo!(),
         _ => panic!("invalid"),

@@ -1,81 +1,81 @@
-use std::{fs::{self, File, OpenOptions}, io::{Error, Write, BufWriter, BufRead, BufReader}, path::Path};
+use std::{iter::Iterator, fs::{self, OpenOptions}, io::{Write, BufWriter, BufRead, BufReader}, path::PathBuf};
 use crate::schedule::Schedule;
 
+pub const SCHEDULE_PATH: String = String::from("schedules.txt");
+
 pub struct SaveLoad {
-    path: Path
+    path: PathBuf
 }
 
 impl SaveLoad {
-    fn read_all_schedules(&self) {
-        let file = OpenOptions::new().read(true).open(self.path).unwrap();
-    }
-
-    pub fn try_new(path: Path) -> Result<SaveLoad, Error> {
-        match path.try_exists() {
-            Ok(_) => Ok(SaveLoad { path }),
-            Err(e) => e,
-        }
-    }
-}
-
-fn read_schedules_from_file(path: SaveLoad) -> Vec<Schedule> {
-    let file = fs::File::open(path).unwrap();
-    let reader = BufReader::new(file);
-
-    reader.lines().map(|line| serde_json::from_str(&line.unwrap()).unwrap()).collect()
-}
-
-fn write_schedule_to_file(data: &Schedule, path: SaveLoadPath) {
-    let mut json = serde_json::to_string(data).unwrap();
-    json.push('\n');
-
-    let file = fs::OpenOptions::new().write(true).append(true).open(SCHEDULE_FILE).unwrap();
-    let mut file = BufWriter::new(file);
-
-    file.write_all(json.as_bytes()).unwrap();
-    file.flush().unwrap();
-}
-
-pub fn delete_schedule(index: usize, path: SaveLoadPath) {
-    let file = fs::OpenOptions::new().read(true).write(true).open(path).unwrap();
-    let reader = BufReader::new(&file);
-    
-    let mut new_contents = String::new();
-
-    for (i, line) in reader.lines().enumerate() {
-        if i != index {
-            new_contents.push_str(&line.unwrap());
+    pub fn try_from(path: String) -> Result<SaveLoad, std::io::Error> {
+        match fs::metadata(path) {
+            Ok(_) => Ok(SaveLoad { path: path.into() }),
+            Err(e) => Err(e),
         }
     }
 
-    let mut writer = BufWriter::new(&file);
-    writer.write_all(new_contents.as_bytes()).unwrap();
-    writer.flush().unwrap();
-}
-
-pub fn replace_schedule(index: usize, replacement: &Schedule, path: SaveLoadPath) {
-    let file = fs::OpenOptions::new().read(true).write(true).open(PATH_TO_FILE).unwrap();
-    let reader = BufReader::new(&file);
-    
-    let mut new_contents = String::new();
-
-    for (i, line) in reader.lines().enumerate() {
-        if i != index {
-            new_contents.push_str(&line.unwrap());
-        } else {
-            new_contents.push_str(&serde_json::to_string(replacement).unwrap())
-        }
+    pub fn read_schedules(&self) -> Vec<Schedule> {
+        self.iter_lines().map(|line| serde_json::from_str(&line).unwrap()).collect()
     }
 
-    let mut writer = BufWriter::new(&file);
-    writer.write_all(new_contents.as_bytes()).unwrap();
-    writer.flush().unwrap();
-}
+    pub fn append_schedule(&self, schedule: &Schedule) {
+        let file = OpenOptions::new().write(true).append(true).open(self.path).unwrap();
+        let mut writer = BufWriter::new(file);
 
-pub fn save_schedule(schedule: &Schedule) {
-    write_schedule_to_file(schedule);
-}
+        let mut json = serde_json::to_string(schedule).unwrap();
+        json.push('\n');
 
-pub fn load_schedules() -> Vec<Schedule> {
-    read_schedules_from_file()
+        writer.write_all(json.as_bytes()).unwrap();
+        writer.flush().unwrap();
+    }
+
+    pub fn insert_schedule(&self, index: usize, schedule: &Schedule) {
+        let mut contents = String::new();
+
+        for (i, line) in self.iter_lines().enumerate() {
+            if i == index {
+                contents.push_str(&serde_json::to_string(schedule).unwrap());
+            } 
+            
+            contents.push_str(&line);
+        }
+
+        OpenOptions::new().write(true).open(&self.path).unwrap().write_all(contents.as_bytes());
+    }
+
+    pub fn remove_schedule(&self, index: usize) {
+        let mut contents = String::new();
+
+        for (i, line) in self.iter_lines().enumerate() {
+            if i == index {
+                continue;
+            } else {
+                contents.push_str(&line);
+            }
+        }
+
+        OpenOptions::new().append(true).open(&self.path).unwrap().write_all(contents.as_bytes());
+    }
+
+    pub fn replace_schedule(&self, index: usize, replacement: &Schedule) {
+        let mut contents = String::new();
+
+        for (i, line) in self.iter_lines().enumerate() {
+            if i == index {
+                contents.push_str(&serde_json::to_string(replacement).unwrap());
+            } else {
+                contents.push_str(&line);
+            }
+        }
+
+        OpenOptions::new().write(true).open(&self.path).unwrap().write_all(contents.as_bytes());
+    }
+
+    fn iter_lines(&self) -> impl Iterator<Item = String> {
+        let file = OpenOptions::new().read(true).open(&self.path).unwrap();
+        let reader = BufReader::new(file);
+
+        reader.lines().map(|line| line.unwrap())
+    }
 }
