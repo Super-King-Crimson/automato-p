@@ -15,12 +15,25 @@ impl SaveLoad {
         }
     }
 
+    pub fn create(path: String) -> SaveLoad {
+        if let Err(_) = fs::metadata(&path) {
+            let mut file = OpenOptions::new().create(true).write(true).open(&path).unwrap();
+            //creates one pomodoro schedule by default
+            file.write_all(b"{\"name\":\"Pomodoro\",\"work_duration\":{\"secs\":1500,\"nanos\":0},\"rest_duration\":{\"secs\":300,\"nanos\":0},\"repeat_type\":{\"Finite\":8},\"rest_type\":{\"LongRest\":{\"blocks_per_long_rest\":4,\"long_rest_duration\":{\"secs\":1800,\"nanos\":0}}}}").unwrap()
+        }
+
+        SaveLoad { path: path.into() }
+    }
+
     pub fn read_schedules(&self) -> Vec<Schedule> {
-        self.iter_lines().map(|line| serde_json::from_str(&line).unwrap()).collect()
+        self.lines().iter().map(|line| {
+            println!("{line}");
+            serde_json::from_str(&line).unwrap()
+        }).collect()
     }
 
     pub fn append_schedule(&self, schedule: &Schedule) {
-        let file = OpenOptions::new().write(true).append(true).open(&self.path).unwrap();
+        let file = OpenOptions::new().append(true).open(&self.path).unwrap();
         let mut writer = BufWriter::new(file);
 
         let mut json = serde_json::to_string(schedule).unwrap();
@@ -33,7 +46,7 @@ impl SaveLoad {
     pub fn insert_schedule(&self, index: usize, schedule: &Schedule) {
         let mut contents = String::new();
 
-        for (i, line) in self.iter_lines().enumerate() {
+        for (i, line) in self.lines().iter().enumerate() {
             if i == index {
                 contents.push_str(&serde_json::to_string(schedule).unwrap());
             } 
@@ -41,13 +54,15 @@ impl SaveLoad {
             contents.push_str(&line);
         }
 
-        OpenOptions::new().write(true).open(&self.path).unwrap().write_all(contents.as_bytes()).unwrap();
+        let mut file = OpenOptions::new().write(true).open(&self.path).unwrap();
+        file.set_len(0).unwrap();
+        file.write_all(contents.as_bytes()).unwrap();
     }
 
     pub fn remove_schedule(&self, index: usize) {
         let mut contents = String::new();
 
-        for (i, line) in self.iter_lines().enumerate() {
+        for (i, line) in self.lines().iter().enumerate() {
             if i == index {
                 continue;
             } else {
@@ -55,13 +70,15 @@ impl SaveLoad {
             }
         }
 
-        OpenOptions::new().append(true).open(&self.path).unwrap().write_all(contents.as_bytes()).unwrap();
+        let mut file = OpenOptions::new().write(true).open(&self.path).unwrap();
+        file.set_len(0).unwrap();
+        file.write_all(contents.as_bytes()).unwrap();
     }
 
     pub fn replace_schedule(&self, index: usize, replacement: &Schedule) {
         let mut contents = String::new();
 
-        for (i, line) in self.iter_lines().enumerate() {
+        for (i, line) in self.lines().iter().enumerate() {
             if i == index {
                 contents.push_str(&serde_json::to_string(replacement).unwrap());
             } else {
@@ -69,13 +86,15 @@ impl SaveLoad {
             }
         }
 
-        OpenOptions::new().write(true).open(&self.path).unwrap().write_all(contents.as_bytes()).unwrap();
+        let mut file = OpenOptions::new().write(true).open(&self.path).unwrap();
+        file.set_len(0).unwrap();
+        file.write_all(contents.as_bytes()).unwrap();
     }
 
-    fn iter_lines(&self) -> impl Iterator<Item = String> {
+    fn lines(&self) -> Vec<String> {
         let file = OpenOptions::new().read(true).open(&self.path).unwrap();
         let reader = BufReader::new(file);
 
-        reader.lines().map(|line| line.unwrap())
+        reader.lines().map(|line| line.unwrap()).collect()
     }
 }

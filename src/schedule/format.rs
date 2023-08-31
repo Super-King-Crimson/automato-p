@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-pub fn dur_to_xhxmxs(dur: Duration, ) -> String {
+pub fn dur_to_xhxmxs(dur: Duration) -> String {
     let mut secs = dur.as_secs();
 
     let mut mins = secs / 60;
@@ -52,24 +52,39 @@ pub fn dur_to_hhmmss(dur: Duration) -> String {
     format!("{hours_str}{mins_str}{secs_str}")
 }
 
+/// Only use if you're 100% sure that your string is 100% able to be converted into a Duration.
 pub fn hhmmss_to_dur(str: &str) -> Duration {
     let mut secs = 0u64;
     
     for (s, i) in str.split(':').rev().zip(0u32..) {
         let parsed: u64 = s.parse().unwrap();
 
+        secs += parsed * 60u64.pow(i);
+    }
+
+    Duration::from_secs(secs)
+}
+
+pub fn try_hhmmss_to_dur(str: &str) -> Option<Duration> {
+    let mut secs = 0u64;
+    
+    for (s, i) in str.split(':').rev().zip(0u32..) {
+        if i > 2 {
+            return None
+        }
+
+        let parsed: u64 = s.parse().unwrap();
+
         if parsed > 60 {
-            if i == 0 {
-                panic!("Cannot have seconds value above 60"); 
-            } else if i == 1 {
-                panic!("Cannot have minutes value above 60");
+            if i == 0 || i == 1 {
+                return None
             }
         }
 
         secs += parsed * 60u64.pow(i);
     }
 
-    Duration::from_secs(secs)
+    Some(Duration::from_secs(secs))
 }
 
 #[allow(unused_imports)] 

@@ -14,6 +14,15 @@ pub struct ScheduleList {
 }
 
 impl ScheduleList {
+    pub fn from(path_to_file: String) -> ScheduleList {
+        let save_load = SaveLoad::create(path_to_file);
+
+        ScheduleList {
+            list: save_load.read_schedules(),
+            save_load
+        }
+    }
+
     pub fn try_from(path_to_file: String) -> Result<ScheduleList, io::Error> {
         let save_load = SaveLoad::try_from(path_to_file)?;
 
@@ -27,6 +36,10 @@ impl ScheduleList {
         self.get(index).start();
     }
 
+    pub fn len(&self) -> usize {
+        self.list.len()
+    }
+
     pub fn display_list(&self) {
         self.iter().enumerate().for_each(|(i, sch)| println!("{i}: {sch}"));
     }
@@ -36,10 +49,12 @@ impl ScheduleList {
     }
 
     pub fn push(&mut self, schedule: Schedule) {
+        self.save_load.append_schedule(&schedule);
         self.list.push(schedule);
     }
 
     pub fn insert(&mut self, index: usize, schedule: Schedule) {
+        self.save_load.insert_schedule(index, &schedule);
         self.list.insert(index, schedule);
     }
 
@@ -62,11 +77,11 @@ impl ScheduleList {
     }
 }
 
-pub fn startup(schedule_file: String) -> Result<ScheduleList, io::Error> {
-    ScheduleList::try_from(schedule_file)
+pub fn startup(schedule_file: String) -> ScheduleList {
+    ScheduleList::from(schedule_file)
 }
 
-pub fn run(schedule_list: &mut ScheduleList) {
+pub fn run(schedule_list: &mut ScheduleList) -> bool {
     console::clear();
 
     println!("Welcome to your automatic pomodoro timer!");
@@ -77,6 +92,7 @@ pub fn run(schedule_list: &mut ScheduleList) {
     println!("1: Create a new schedule");
     println!("2: Modify a pre-existing schedule");
     println!("3: Configure app defaults");
+    println!("4: Exit app");
 
     let input = console::get_input_trimmed();
 
@@ -84,8 +100,14 @@ pub fn run(schedule_list: &mut ScheduleList) {
 
     match input.parse() {
         Ok(0_u8) => prompts::start_schedule::start(schedule_list),
-        Ok(1) => prompts::create_schedule::start(schedule_list).unwrap_or(()),
-        Ok(2) => todo!(),
+        Ok(1) => prompts::create_schedule::start(schedule_list),
+        Ok(2) => prompts::modify_schedule::start(schedule_list),
+        Ok(3) => todo!("FIGURE OUT HOW TO PLAY SOUNDS FROM COMMAND LINE"),
+        Ok(4) => {
+            return false;
+        }
         _ => panic!("invalid"),
     };
+
+    true
 }

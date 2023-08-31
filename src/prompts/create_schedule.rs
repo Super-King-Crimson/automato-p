@@ -41,7 +41,7 @@ const SCHEDULE_QUESTIONS: [&str; 8] = [
     "How long should your work block be? (HH:MM::SS)",
     "What about your rest block? (HH:MM::SS)",
 
-    "Should your schedule (1)end on its own, or (2)should you have to manually exit? (Answer 1 or 2)",
+    "Should your schedule (1) last a fixed amount of time, or (2) continue infinitely until you manually exit? (Answer 1 or 2)",
     "After how many work + rest blocks should your schedule end?",
 
     "Do you want a long break? (y/n)",
@@ -137,10 +137,10 @@ fn convert_to_schedule(responses: ScheduleCreateResponses) -> Schedule {
     }
 }
 
-pub fn start(schedule_list: &mut ScheduleList) -> Option<()> {
-    match prompt() {
-        Some(responses) => Some(schedule_list.push(convert_to_schedule(responses))),
-        None => None,
+pub fn start(schedule_list: &mut ScheduleList) {
+    if let Some(responses) = prompt() {
+        let schedule = convert_to_schedule(responses);
+        schedule_list.push(schedule);
     }
 }
 

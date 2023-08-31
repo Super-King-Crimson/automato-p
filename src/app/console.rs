@@ -18,10 +18,7 @@ pub fn get_input() -> String {
 }
 
 pub fn get_input_trimmed() -> String {
-    let mut buf = String::new();
-    io::stdin().read_line(&mut buf).unwrap();
-
-    buf.trim().to_string()
+    get_input().trim().to_string()
 }
 
 pub fn hide_cursor() {
@@ -44,6 +41,16 @@ pub fn wait_for_key_press() -> KeyEvent {
                 return event;
             }
         }
+    }
+}
+
+pub fn yes_or_no() -> Option<bool> {
+    let response = get_input_trimmed();
+
+    match response.as_ref() {
+        "y" | "yes" => Some(true),
+        "n" | "no" => Some(false),
+        _ => None
     }
 }
 

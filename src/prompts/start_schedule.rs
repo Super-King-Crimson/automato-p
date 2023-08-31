@@ -2,6 +2,7 @@ use crate::app::{console, ScheduleList};
 
 pub fn start(schedule_list: &mut ScheduleList) {
     println!("Which schedule would you like to start?");
+    schedule_list.display_list();
     println!("B: Back");
 
     let response = {
