@@ -57,14 +57,3 @@ pub fn yes_or_no() -> Option<bool> {
 pub fn flush() {
     io::stdout().flush().unwrap();
 }
-
-#[allow(unused_imports)]
-mod tests {
-    use super::*;
-
-    #[test]
-    #[ignore]
-    fn wait_for_key_press_should_wait_until_next_input() {
-        wait_for_key_press();
-    }
-}

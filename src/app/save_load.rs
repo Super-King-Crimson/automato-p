@@ -1,7 +1,7 @@
 use std::{iter::Iterator, fs::{self, OpenOptions}, io::{Write, BufWriter, BufRead, BufReader}, path::PathBuf};
 use crate::schedule::Schedule;
 
-pub const SCHEDULE_PATH: &str = "schedules.txt";
+pub const SCHEDULE_PATH: &str = "./user/schedules.txt";
 
 pub struct SaveLoad {
     path: PathBuf
@@ -27,7 +27,6 @@ impl SaveLoad {
 
     pub fn read_schedules(&self) -> Vec<Schedule> {
         self.lines().iter().map(|line| {
-            println!("{line}");
             serde_json::from_str(&line).unwrap()
         }).collect()
     }

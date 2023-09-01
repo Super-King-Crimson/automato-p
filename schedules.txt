@@ -1,1 +1,0 @@
-{"name":"orodomoP","work_duration":{"secs":1500,"nanos":0},"rest_duration":{"secs":300,"nanos":0},"repeat_type":{"Finite":8},"rest_type":{"LongRest":{"blocks_per_long_rest":4,"long_rest_duration":{"secs":1800,"nanos":0}}}}

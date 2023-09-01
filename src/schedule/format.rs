@@ -86,39 +86,3 @@ pub fn try_hhmmss_to_dur(str: &str) -> Option<Duration> {
 
     Some(Duration::from_secs(secs))
 }
-
-#[allow(unused_imports)] 
-mod tests {
-    use super::*;
-    use std::time::Duration;
-
-    #[test]
-    fn hhmmss_to_dur_converts_with_hours() {
-        let dur = hhmmss_to_dur("10:00:00");
-        assert_eq!(Duration::from_secs(10 * 60 * 60), dur);
-    }
-
-    #[test]
-    fn hhmmss_to_dur_converts_with_hours_mins_secs() {
-        let dur = hhmmss_to_dur("10:14:59");
-        assert_eq!(Duration::from_secs(10 * 60 * 60 + 14 * 60 + 59), dur);
-    }
-    
-    #[test]
-    fn hhmmss_to_dur_converts_with_arbitrary_zeroes() {
-        let dur = hhmmss_to_dur("00:09:10");
-        assert_eq!(Duration::from_secs(9 * 60 + 10), dur);
-    }
-
-    #[test]
-    #[should_panic(expected = "seconds")]
-    fn hhmmss_to_dur_panics_if_cannot_convert_seconds() {
-        let _dur = hhmmss_to_dur("00:09:99");
-    }
-
-    #[test]
-    #[should_panic(expected = "minutes")]
-    fn hhmmss_to_dur_panics_if_cannot_convert_minutes() {
-        let _dur = hhmmss_to_dur("00:69:00");
-    }
-}

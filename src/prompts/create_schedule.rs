@@ -143,15 +143,3 @@ pub fn start(schedule_list: &mut ScheduleList) {
         schedule_list.push(schedule);
     }
 }
-
-#[cfg(test)]
-#[allow(unused_imports)]
-mod tests {
-    use super::*;
-    use std::slice::Iter;
-
-    #[test]
-    fn schedules_should_save_to_file() {
-        let _list = ScheduleCreateResponses::new();
-    }
-}
