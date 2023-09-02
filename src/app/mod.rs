@@ -1,16 +1,32 @@
 pub mod save_load;
 pub mod console;
 
-use std::{io, slice::Iter, process::Command};
+use std::{io, slice::Iter, path::Path, error::Error, fmt::Display};
 use crate::{
     schedule::Schedule,
     prompts,
 };
 use save_load::SaveLoad;
 
+#[derive(Debug)]
+pub struct PlainTextError(String);
+
+impl PlainTextError {
+    fn from_str(details: &str) -> PlainTextError {
+        PlainTextError(details.to_string())
+    }
+}
+
+impl Display for PlainTextError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Error for PlainTextError {}
+
 pub struct ScheduleList {
     list: Vec<Schedule>, 
-    save_load: SaveLoad,
 }
 
 impl ScheduleList {
@@ -77,8 +93,46 @@ impl ScheduleList {
     }
 }
 
-pub fn startup(schedule_file: String) -> ScheduleList {
-    ScheduleList::from(schedule_file)
+pub struct AppSettings {
+    sound_path: Option<String>,
+} 
+
+impl AppSettings {
+    pub fn new() -> AppSettings {
+        AppSettings { sound_path: None }
+    }
+
+    pub fn change_sound(&mut self, path: String) -> Result<(), PlainTextError> {
+        let p = Path::new(&path);
+
+        if p.exists() {
+            if let Some(ext) = p.extension() {
+                if ext == "mp3" {
+                    self.sound_path = Some(path);
+                    Ok(())
+                } else {
+                    Err(PlainTextError(format!("Bad file extension (found {}, expected mp3)", ext.to_str().unwrap())))
+                }
+            } else {
+                Err(PlainTextError::from_str("File did not have a file extension (expected mp3)"))
+            }
+        } else {
+            Err(PlainTextError(format!("File at path '{path}' not found")))
+        }
+    }
+}
+
+pub struct AppData {
+    pub schedule_list: ScheduleList,
+    pub app_settings: AppSettings,
+    pub save_load: SaveLoad,
+}
+
+pub fn startup(schedule_file: String, settings_file: String) -> AppData {
+    AppData {
+        schedule_list: ScheduleList::from(schedule_file),
+        app_settings: AppSettings::from
+    }
 }
 
 pub fn run(schedule_list: &mut ScheduleList) -> bool {
@@ -102,7 +156,7 @@ pub fn run(schedule_list: &mut ScheduleList) -> bool {
         Ok(0_u8) => prompts::start_schedule::start(schedule_list),
         Ok(1) => prompts::create_schedule::start(schedule_list),
         Ok(2) => prompts::modify_schedule::start(schedule_list),
-        Ok(3) => todo!("FIGURE OUT HOW TO PLAY SOUNDS FROM COMMAND LINE"),
+        Ok(3) => prompts::modify_app::start(),
         Ok(4) => {
             return false;
         }
