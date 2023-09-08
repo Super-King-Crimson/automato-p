@@ -65,20 +65,26 @@ impl Schedule {
                     working = !working;
 
                     if let Some(path) = alarm_path {
-                        todo!("FIXME: FIX THIS (see console.rs/play_sound)");
-                        let result = console::play_sound(path); 
+                        let result = console::play_sound(path);
+                        thread::sleep(Duration::from_secs(1));
+
                         match result {
-                            Ok(status) if !status.success() => {
-                                eprintln!("Sound failed to play: \
-                                check to make sure your sound path is correct");
-                                thread::sleep(Duration::from_secs(2));
+                            Ok(mut proc) => {
+                                if let Ok(Some(status)) = proc.try_wait() {
+                                    if !status.success() {
+                                        eprintln!("Sound failed to play: \
+                                        check to make sure your sound path is correct");
+                                        thread::sleep(Duration::from_secs(2)); 
+                                    }
+                                } else {
+                                    panic!("Error attempting to... wait? Don't ask me, I'm puzzled");
+                                }
                             }
                             Err(_) => {
                                 eprintln!("Sound failed to play: \
                                 check to make sure mpg123 is installed");
                                 thread::sleep(Duration::from_secs(2));
                             }
-                            _ => (),
                         }
                     }
 

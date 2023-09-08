@@ -1,4 +1,4 @@
-use std::{io::{self, Write}, process::{Command, Stdio}};
+use std::{io::{self, Write}, process::{Command, Stdio, Child}};
 use crossterm::{event::{self, Event, KeyEvent, KeyEventKind}, cursor, terminal, ExecutableCommand};
 
 pub fn clear() {
@@ -58,12 +58,9 @@ pub fn flush() {
     io::stdout().flush().unwrap();
 }
 
-pub fn play_sound(path: &str) -> ! {
-    let sound_child = Command::new("mpg123")
+pub fn play_sound(path: &str) -> Result<Child, io::Error> {
+    Command::new("mpg123")
         .arg(path)
-        .stdout(Stdio::piped())
-        .output()
-        .expect("HELP ME");
-    
-    todo!("Get this crap working and figure out how to hide the input it's disgusting");
+        .stdout(Stdio::null())
+        .spawn()
 }
