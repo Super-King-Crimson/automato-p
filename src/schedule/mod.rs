@@ -32,7 +32,17 @@ pub struct Schedule {
 const QUARTER_SECOND: Duration = Duration::from_millis(250);
 const CONGRATS_TIME: Duration = Duration::from_millis(5000);
 impl Schedule {
-    pub fn start(&self) {
+    pub fn pomodoro() -> Schedule {
+        Schedule { 
+            name: String::from("Pomodoro"), 
+            work_duration: Duration::from_secs(60 * 25), 
+            rest_duration: Duration::from_secs(60 * 5), 
+            repeat_type: RepeatType::Finite(8), 
+            rest_type: RestType::LongRest { blocks_per_long_rest: 4, long_rest_duration: Duration::from_secs(60 * 30) }
+        }
+    }
+
+    pub fn start(&self, alarm_path: Option<&str>) {
         let mut dur = self.work_duration;
         let mut working = true;
         let mut block_count = 1;
@@ -53,12 +63,32 @@ impl Schedule {
                 Some(new_dur) => dur = new_dur + QUARTER_SECOND,
                 None => {
                     working = !working;
+
+                    if let Some(path) = alarm_path {
+                        todo!("FIXME: FIX THIS (see console.rs/play_sound)");
+                        let result = console::play_sound(path); 
+                        match result {
+                            Ok(status) if !status.success() => {
+                                eprintln!("Sound failed to play: \
+                                check to make sure your sound path is correct");
+                                thread::sleep(Duration::from_secs(2));
+                            }
+                            Err(_) => {
+                                eprintln!("Sound failed to play: \
+                                check to make sure mpg123 is installed");
+                                thread::sleep(Duration::from_secs(2));
+                            }
+                            _ => (),
+                        }
+                    }
+
                     console::clear();
 
                     if working {
                         println!("Working block {}", block_count);
                         dur = self.work_duration;
                     } else {
+                        
                         block_count += 1;
 
                         if let RepeatType::Finite(repeats) = self.repeat_type {
@@ -86,8 +116,6 @@ impl Schedule {
 
                         println!("Rest block {}", block_count - 1);
                     }
-
-                    
                 }
             }
         }
@@ -186,7 +214,7 @@ mod tests {
         let before = SystemTime::now();
         
         thread::spawn(move || {
-            schedule.start();
+            schedule.start(None);
         }).join().unwrap();
 
         let passed_time = {

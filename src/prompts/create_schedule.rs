@@ -1,5 +1,5 @@
 use crate::{
-    app::{ScheduleList, console},
+    app::{console, AppData},
     schedule::{format, RepeatType, RestType, Schedule},
 };
 
@@ -137,9 +137,9 @@ fn convert_to_schedule(responses: ScheduleCreateResponses) -> Schedule {
     }
 }
 
-pub fn start(schedule_list: &mut ScheduleList) {
+pub fn start(app_data: &mut AppData) {
     if let Some(responses) = prompt() {
         let schedule = convert_to_schedule(responses);
-        schedule_list.push(schedule);
+        app_data.push_schedule(schedule);
     }
 }

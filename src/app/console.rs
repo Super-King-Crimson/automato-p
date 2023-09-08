@@ -1,4 +1,4 @@
-use std::io::{self, Write};
+use std::{io::{self, Write}, process::{Command, Stdio}};
 use crossterm::{event::{self, Event, KeyEvent, KeyEventKind}, cursor, terminal, ExecutableCommand};
 
 pub fn clear() {
@@ -56,4 +56,14 @@ pub fn yes_or_no() -> Option<bool> {
 
 pub fn flush() {
     io::stdout().flush().unwrap();
+}
+
+pub fn play_sound(path: &str) -> ! {
+    let sound_child = Command::new("mpg123")
+        .arg(path)
+        .stdout(Stdio::piped())
+        .output()
+        .expect("HELP ME");
+    
+    todo!("Get this crap working and figure out how to hide the input it's disgusting");
 }

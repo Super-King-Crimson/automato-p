@@ -1,141 +1,73 @@
 pub mod save_load;
 pub mod console;
+pub mod app_settings;
+pub mod error;
+pub mod schedule_list;
 
-use std::{io, slice::Iter, path::Path, error::Error, fmt::Display};
-use crate::{
-    schedule::Schedule,
-    prompts,
-};
+use crate::{prompts, schedule::Schedule};
 use save_load::SaveLoad;
 
-#[derive(Debug)]
-pub struct PlainTextError(String);
+use schedule_list::ScheduleList; 
+use app_settings::AppSettings;
 
-impl PlainTextError {
-    fn from_str(details: &str) -> PlainTextError {
-        PlainTextError(details.to_string())
-    }
+pub struct AppData {
+    schedule_list: ScheduleList,
+    app_settings: AppSettings,
+    save_load: SaveLoad,
 }
 
-impl Display for PlainTextError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl Error for PlainTextError {}
-
-pub struct ScheduleList {
-    list: Vec<Schedule>, 
-}
-
-impl ScheduleList {
-    pub fn from(path_to_file: String) -> ScheduleList {
-        let save_load = SaveLoad::create(path_to_file);
-
-        ScheduleList {
-            list: save_load.read_schedules(),
-            save_load
-        }
+impl AppData {
+    pub fn push_schedule(&mut self, schedule: Schedule) {
+        self.save_load.append_schedule(&schedule);
+        self.schedule_list.push(schedule);
     }
 
-    pub fn try_from(path_to_file: String) -> Result<ScheduleList, io::Error> {
-        let save_load = SaveLoad::try_from(path_to_file)?;
+    pub fn insert_schedule(&mut self, index: usize, schedule: Schedule) {
+        self.save_load.insert_schedule(index, &schedule);
+        self.schedule_list.insert(index, schedule);
+    }
 
-        Ok(ScheduleList {
-            list: save_load.read_schedules(),
-            save_load
-        })
+    pub fn remove_schedule(&mut self, index: usize) {
+        self.save_load.remove_schedule(index);
+        self.schedule_list.remove(index);
+    }
+
+    pub fn replace_schedule(&mut self, index: usize, replacement: Schedule) {
+        self.save_load.replace_schedule(index, &replacement);
+        self.schedule_list.replace(index, replacement)
+    }
+
+    pub fn display_schedule_list(&self) {
+        self.schedule_list.display_list();
     }
 
     pub fn start_schedule(&self, index: usize) {
-        self.get(index).start();
+        self.schedule_list.start_schedule(index, self.app_settings.get_sound_path());
     }
 
-    pub fn len(&self) -> usize {
-        self.list.len()
+    pub fn num_schedules(&self) -> usize {
+        self.schedule_list.len()
     }
 
-    pub fn display_list(&self) {
-        self.iter().enumerate().for_each(|(i, sch)| println!("{i}: {sch}"));
-    }
-    
-    pub fn get(&self, index: usize) -> &Schedule {
-        self.list.get(index).unwrap()
-    }
-
-    pub fn push(&mut self, schedule: Schedule) {
-        self.save_load.append_schedule(&schedule);
-        self.list.push(schedule);
-    }
-
-    pub fn insert(&mut self, index: usize, schedule: Schedule) {
-        self.save_load.insert_schedule(index, &schedule);
-        self.list.insert(index, schedule);
-    }
-
-    pub fn remove(&mut self, index: usize) {
-        self.save_load.remove_schedule(index);
-        self.list.remove(index);
-    }
-
-    pub fn replace(&mut self, index: usize, replacement: Schedule) {
-        self.save_load.replace_schedule(index, &replacement);
-        *self.get_mut(index) = replacement;
-    }
-
-    pub fn iter(&self) -> Iter<'_, Schedule> {
-        self.list.iter()
-    }
-
-    fn get_mut(&mut self, index: usize) -> &mut Schedule {
-        self.list.get_mut(index).unwrap()
+    pub fn get_schedule(&self, index: usize) -> &Schedule {
+        self.schedule_list.get(index)
     }
 }
 
-pub struct AppSettings {
-    sound_path: Option<String>,
-} 
+pub fn startup() -> AppData {
+    let save_load = SaveLoad::new();
 
-impl AppSettings {
-    pub fn new() -> AppSettings {
-        AppSettings { sound_path: None }
-    }
+    let schedule_list = ScheduleList::from(save_load.read_schedules());
+    let app_settings = save_load.read_settings();
 
-    pub fn change_sound(&mut self, path: String) -> Result<(), PlainTextError> {
-        let p = Path::new(&path);
-
-        if p.exists() {
-            if let Some(ext) = p.extension() {
-                if ext == "mp3" {
-                    self.sound_path = Some(path);
-                    Ok(())
-                } else {
-                    Err(PlainTextError(format!("Bad file extension (found {}, expected mp3)", ext.to_str().unwrap())))
-                }
-            } else {
-                Err(PlainTextError::from_str("File did not have a file extension (expected mp3)"))
-            }
-        } else {
-            Err(PlainTextError(format!("File at path '{path}' not found")))
-        }
-    }
-}
-
-pub struct AppData {
-    pub schedule_list: ScheduleList,
-    pub app_settings: AppSettings,
-    pub save_load: SaveLoad,
-}
-
-pub fn startup(schedule_file: String, settings_file: String) -> AppData {
     AppData {
-        schedule_list: ScheduleList::from(schedule_file),
-        app_settings: AppSettings::from
+        save_load,
+        schedule_list,
+        app_settings,
     }
 }
 
-pub fn run(schedule_list: &mut ScheduleList) -> bool {
+pub fn run(mut app_data: &mut AppData) -> bool {
     console::clear();
 
     println!("Welcome to your automatic pomodoro timer!");
@@ -153,9 +85,9 @@ pub fn run(schedule_list: &mut ScheduleList) -> bool {
     console::clear();
 
     match input.parse() {
-        Ok(0_u8) => prompts::start_schedule::start(schedule_list),
-        Ok(1) => prompts::create_schedule::start(schedule_list),
-        Ok(2) => prompts::modify_schedule::start(schedule_list),
+        Ok(0_u8) => prompts::start_schedule::start(&mut app_data),
+        Ok(1) => prompts::create_schedule::start(&mut app_data),
+        Ok(2) => prompts::modify_schedule::start(&mut app_data),
         Ok(3) => prompts::modify_app::start(),
         Ok(4) => {
             return false;

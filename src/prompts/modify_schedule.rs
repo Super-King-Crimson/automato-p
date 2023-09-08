@@ -1,4 +1,4 @@
-use crate::{app::{ScheduleList, console}, schedule::{Schedule, RepeatType::*, RestType::{*, self}, format::try_hhmmss_to_dur}};
+use crate::{app::{console, AppData}, schedule::{Schedule, RepeatType::*, RestType::{*, self}, format::try_hhmmss_to_dur}};
 
 const CHANGE_OPTIONS: [&str; 5] = [
     "Name",
@@ -197,10 +197,10 @@ fn change_schedule(schedule: &Schedule, option_index: usize) -> Option<Schedule>
     Some(new_schedule)
 }
 
-fn prompt(schedule_list: &mut ScheduleList) {
+fn prompt(app_data: &mut AppData) {
     println!("Which schedule would you like to modify?");
 
-    schedule_list.display_list();
+    app_data.display_schedule_list();
     let response = console::get_input_trimmed();
 
     if response.eq_ignore_ascii_case("back") {
@@ -212,19 +212,19 @@ fn prompt(schedule_list: &mut ScheduleList) {
         Err(_) => {
             console::clear();
             println!("'{response}' is not a valid schedule. Please try again.");
-            prompt(schedule_list);
+            prompt(app_data);
             return
         },
     };
 
-    if schedule_index >= schedule_list.len() {
+    if schedule_index >= app_data.num_schedules() {
         console::clear();
         println!("'{response}' is not a valid schedule. Please try again.");
-        prompt(schedule_list);
+        prompt(app_data);
         return
     }
 
-    let schedule = schedule_list.get(schedule_index);
+    let schedule = app_data.get_schedule(schedule_index);
     
     println!("What would you like to change about {}?", schedule.name);
     for (i, opt) in CHANGE_OPTIONS.iter().enumerate() {
@@ -239,12 +239,12 @@ fn prompt(schedule_list: &mut ScheduleList) {
         match response.parse::<usize>() {
             Ok(option_index) if option_index < CHANGE_OPTIONS.len() => {
                 if let Some(new_schedule) = change_schedule(schedule, option_index) {
-                    schedule_list.replace(schedule_index, new_schedule);
+                    app_data.replace_schedule(schedule_index, new_schedule);
                 }
             },
             _ => {
                 println!("'{response}' is not a valid response. Please try again.");
-                prompt(schedule_list);
+                prompt(app_data);
                 return;
             }
         }
@@ -253,7 +253,7 @@ fn prompt(schedule_list: &mut ScheduleList) {
     println!("Would you like to continue changing your schedule? (y/n)");
     match console::yes_or_no() {
         Some(true) => {
-            prompt(schedule_list);
+            prompt(app_data);
             return;
         }
         Some(false) => println!("Returning to main menu..."),
@@ -262,7 +262,7 @@ fn prompt(schedule_list: &mut ScheduleList) {
 }
 
 
-pub fn start(schedule_list: &mut ScheduleList) {
+pub fn start(app_data: &mut AppData) {
     println!("Type BACK at any point to go back to the main menu");
-    prompt(schedule_list);
+    prompt(app_data);
 }
