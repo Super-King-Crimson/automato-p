@@ -66,7 +66,8 @@ impl Schedule {
 
                     if let Some(path) = alarm_path {
                         let result = console::play_sound(path);
-                        thread::sleep(Duration::from_secs(1));
+                        //Wait a bit to see if the thing failed
+                        thread::sleep(Duration::from_secs(100));
 
                         match result {
                             Ok(mut proc) => {
@@ -77,7 +78,7 @@ impl Schedule {
                                         thread::sleep(Duration::from_secs(2)); 
                                     }
                                 } else {
-                                    panic!("Error attempting to... wait? Don't ask me, I'm puzzled");
+                                    panic!("Error attempting to wait lmao see ya");
                                 }
                             }
                             Err(_) => {

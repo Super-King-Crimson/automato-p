@@ -93,16 +93,18 @@ impl SaveLoad {
     pub fn insert_schedule(&self, index: usize, schedule: &Schedule) {
         let lines = read_lines_from_file(&self.schedule_path).expect(EXPECT_FILE);
         let mut buf = String::new();
+        
+        let to_string = serde_json::to_string(schedule).expect(EXPECT_VALID_TO_JSON) + "\n";
 
-        for (i, line) in lines.enumerate() {
-            let line = line.expect(EXPECT_VALID_UTF8);
-
+        lines.map(|line| line.expect(EXPECT_VALID_UTF8) + "\n")
+        .enumerate()
+        .for_each(|(i, line)| {
             if i == index {
-                buf.push_str(&serde_json::to_string(schedule).expect(EXPECT_VALID_JSON));
+                buf.push_str(&to_string);
             } 
             
             buf.push_str(&line);
-        }
+        });
 
         let mut file = OpenOptions::new().write(true).truncate(true).open(&self.schedule_path).unwrap();
         file.write_all(buf.as_bytes()).expect(EXPECT_VALID_UTF8);
@@ -112,15 +114,14 @@ impl SaveLoad {
         let lines = read_lines_from_file(&self.schedule_path).expect(EXPECT_FILE);
         let mut buf = String::new();
 
-        for (i, line) in lines.enumerate() {
-            let line = line.expect(EXPECT_VALID_UTF8);
-
-            if i == index {
-                continue;
-            } else {
-                buf.push_str(&line);
-            }
-        }
+        lines
+            .map(|line| line.expect(EXPECT_VALID_UTF8) + "\n")
+            .enumerate()
+            .for_each(|(i, line)| {
+                if i != index {
+                    buf.push_str(&line);
+                }
+            });
 
         let mut file = OpenOptions::new().write(true).truncate(true).open(&self.schedule_path).expect(EXPECT_FILE);
         file.write_all(buf.as_bytes()).expect(EXPECT_WRITE);
@@ -130,15 +131,18 @@ impl SaveLoad {
         let lines = read_lines_from_file(&self.schedule_path).expect(EXPECT_FILE);
         let mut buf = String::new();
 
-        for (i, line) in lines.enumerate() {
-            let line = line.expect(EXPECT_VALID_UTF8);
+        let to_string = serde_json::to_string(replacement).expect(EXPECT_VALID_TO_JSON) + "\n";
 
-            if i == index {
-                buf.push_str(&serde_json::to_string(replacement).expect(EXPECT_VALID_JSON));
-            } else {
-                buf.push_str(&line);
-            }
-        }
+        lines
+            .map(|line| line.expect(EXPECT_VALID_UTF8) + "\n")
+            .enumerate()
+            .for_each(|(i, line)| {
+                if i == index {
+                    buf.push_str(&to_string);
+                } else {
+                    buf.push_str(&line);
+                }
+            });
 
         let mut file = OpenOptions::new().write(true).truncate(true).open(&self.schedule_path).expect(EXPECT_FILE);
         file.write_all(buf.as_bytes()).expect(EXPECT_VALID_UTF8);
@@ -150,7 +154,7 @@ impl SaveLoad {
     }
 
     pub fn change_settings(&self, new_settings: AppSettings) {
-        let json = serde_json::to_string(&new_settings).expect(EXPECT_VALID_TO_JSON);
+        let json = serde_json::to_string(&new_settings).expect(EXPECT_VALID_TO_JSON) + "\n";
         write_to_file(&self.settings_path, &json).expect(EXPECT_FILE);
     }
 
@@ -158,19 +162,17 @@ impl SaveLoad {
         let file = OpenOptions::new().write(true).create(true).truncate(true).open(path).expect(EXPECT_FILE);
         let mut writer = BufWriter::new(file);
 
-        let json = serde_json::to_string_pretty(&AppSettings::default()).expect(EXPECT_VALID_TO_JSON);
+        let json = serde_json::to_string_pretty(&AppSettings::default()).expect(EXPECT_VALID_TO_JSON) + "\n";
             
         writer.write_all(json.as_bytes()).expect(EXPECT_VALID_UTF8);
-        writer.write(b"\n").expect(EXPECT_WRITE);
     }
 
     fn init_schedule_file(path: &str) {
         let file = OpenOptions::new().write(true).create(true).truncate(true).open(path).expect(EXPECT_FILE);
         let mut writer = BufWriter::new(file);
 
-        let json = serde_json::to_string(&Schedule::pomodoro()).expect(EXPECT_VALID_TO_JSON);
+        let json = serde_json::to_string(&Schedule::pomodoro()).expect(EXPECT_VALID_TO_JSON) + "\n";
 
         writer.write_all(json.as_bytes()).expect(EXPECT_VALID_UTF8);
-        writer.write(b"\n").expect(EXPECT_WRITE);
     }
 }

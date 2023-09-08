@@ -62,5 +62,6 @@ pub fn play_sound(path: &str) -> Result<Child, io::Error> {
     Command::new("mpg123")
         .arg(path)
         .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .spawn()
 }
