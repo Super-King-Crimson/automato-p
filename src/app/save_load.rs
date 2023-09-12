@@ -1,4 +1,4 @@
-use std::{fs::{OpenOptions, File}, io::{self, BufRead, BufWriter, BufReader, Lines, Write}, path::{PathBuf, Path}};
+use std::{fs::{OpenOptions, File, self}, io::{self, BufRead, BufWriter, BufReader, Lines, Write}, path::{PathBuf, Path}};
 use crate::schedule::Schedule;
 
 use super::app_settings::AppSettings;
@@ -158,7 +158,12 @@ impl SaveLoad {
         write_to_file(&self.settings_path, &json).expect(EXPECT_FILE);
     }
 
+    fn init_user_dir(parent_dir: &str) {
+        fs::create_dir_all(format!("{parent_dir}/user")).unwrap();
+    }
+
     fn init_settings_file(path: &str) {
+        SaveLoad::init_user_dir(".");
         let file = OpenOptions::new().write(true).create(true).truncate(true).open(path).expect(EXPECT_FILE);
         let mut writer = BufWriter::new(file);
 
@@ -168,6 +173,7 @@ impl SaveLoad {
     }
 
     fn init_schedule_file(path: &str) {
+        SaveLoad::init_user_dir(".");
         let file = OpenOptions::new().write(true).create(true).truncate(true).open(path).expect(EXPECT_FILE);
         let mut writer = BufWriter::new(file);
 
