@@ -10,4 +10,6 @@ fn main() {
             break;
         }
     }
+
+    println!("Thanks for using automato-p!");
 }

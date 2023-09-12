@@ -11,8 +11,8 @@ use schedule_list::ScheduleList;
 use app_settings::AppSettings;
 
 pub struct AppData {
+    pub app_settings: AppSettings,
     schedule_list: ScheduleList,
-    app_settings: AppSettings,
     save_load: SaveLoad,
 }
 
@@ -88,7 +88,7 @@ pub fn run(mut app_data: &mut AppData) -> bool {
         Ok(0_u8) => prompts::start_schedule::start(&mut app_data),
         Ok(1) => prompts::create_schedule::start(&mut app_data),
         Ok(2) => prompts::modify_schedule::start(&mut app_data),
-        Ok(3) => prompts::modify_app::start(),
+        Ok(3) => prompts::modify_app::start(&mut app_data),
         Ok(4) => {
             return false;
         }
