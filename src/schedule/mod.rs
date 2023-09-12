@@ -67,28 +67,30 @@ impl Schedule {
                     if let Some(path) = alarm_path {
                         let result = console::play_sound(path);
                         //Wait a bit to see if the thing failed
-                        thread::sleep(Duration::from_secs(100));
+                        thread::sleep(Duration::from_millis(100));
 
                         match result {
                             Ok(mut proc) => {
-                                if let Ok(Some(status)) = proc.try_wait() {
+                                if let Some(status) = proc.try_wait().expect("Expected wait for process to be valid") {
                                     if !status.success() {
-                                        eprintln!("Sound failed to play: \
+                                        eprintln!("\nSound failed to play: \
                                         check to make sure your sound path is correct");
-                                        thread::sleep(Duration::from_secs(2)); 
+                                    } else {
+                                        println!("Playing alarm...");
                                     }
                                 } else {
-                                    panic!("Error attempting to wait lmao see ya");
+                                    proc.kill().expect("Proc should not have been terminated as it has already been checked for");
+                                    eprintln!("\nSound took too long start playing");
                                 }
                             }
                             Err(_) => {
-                                eprintln!("Sound failed to play: \
+                                eprintln!("\nSound failed to play: \
                                 check to make sure mpg123 is installed");
-                                thread::sleep(Duration::from_secs(2));
                             }
                         }
                     }
-
+                    
+                    thread::sleep(Duration::from_secs(2)); 
                     console::clear();
 
                     if working {
@@ -108,9 +110,13 @@ impl Schedule {
 
                         if let RestType::LongRest { blocks_per_long_rest, long_rest_duration } = self.rest_type {
                             if block_count % blocks_per_long_rest == 1 && block_count != 1 {
-                                println!("Congratulations on completing {} blocks! Here's a deserved long break:",
-                                    if block_count == blocks_per_long_rest { blocks_per_long_rest.to_string() } 
-                                    else { format!("another {blocks_per_long_rest}") }
+                                println!("Congratulations on completing {}{} blocks! Here's a deserved long break:",
+                                    if block_count == blocks_per_long_rest + 1 {
+                                        "your first "
+                                    } else {
+                                        "another "
+                                    },
+                                    blocks_per_long_rest.to_string(),
                                 );
                                 
                                 console::hide_cursor();
