@@ -11,7 +11,7 @@ use schedule_list::ScheduleList;
 use app_settings::AppSettings;
 
 pub struct AppData {
-    pub app_settings: AppSettings,
+    app_settings: AppSettings,
     schedule_list: ScheduleList,
     save_load: SaveLoad,
 }
@@ -42,7 +42,7 @@ impl AppData {
     }
 
     pub fn start_schedule(&self, index: usize) {
-        self.schedule_list.start_schedule(index, self.app_settings.get_sound_path());
+        self.schedule_list.start_schedule(index, self.get_sound_path());
     }
 
     pub fn num_schedules(&self) -> usize {
@@ -51,6 +51,15 @@ impl AppData {
 
     pub fn get_schedule(&self, index: usize) -> &Schedule {
         self.schedule_list.get(index)
+    }
+
+    pub fn get_sound_path(&self) -> Option<&str> {
+        self.app_settings.sound_path.as_deref()
+    }
+
+    pub fn set_sound_path(&mut self, new_path: Option<String>) {
+        self.save_load.save_settings(&self.app_settings);
+        self.app_settings.sound_path = new_path;
     }
 }
 

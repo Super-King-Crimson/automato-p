@@ -11,8 +11,4 @@ impl AppSettings {
             sound_path: None,
         }
     }
-
-    pub fn get_sound_path(&self) -> Option<&str> {
-        self.sound_path.as_deref()
-    }
 }

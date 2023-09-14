@@ -1,11 +1,12 @@
 use crate::{app::{console, AppData}, schedule::{Schedule, RepeatType::*, RestType::{*, self}, format::try_hhmmss_to_dur}};
 
-const CHANGE_OPTIONS: [&str; 5] = [
+const CHANGE_OPTIONS: [&str; 6] = [
     "Name",
     "Work Duration",
     "Rest Duration",
     "Repeat Type",
-    "Rest Type"
+    "Rest Type",
+    "Delete this schedule",
 ];
 
 fn prompt_create_long_rest() -> Option<RestType> {
@@ -51,7 +52,7 @@ fn prompt_create_long_rest() -> Option<RestType> {
     Some(LongRest { blocks_per_long_rest, long_rest_duration })
 }
 
-fn change_schedule(schedule: &Schedule, option_index: usize) -> Option<Schedule> {
+fn change_schedule(schedule: &Schedule, option_index: usize) -> Option<Option<Schedule>> {
     let mut new_schedule = schedule.clone();
 
     if option_index == 0 {
@@ -190,11 +191,19 @@ fn change_schedule(schedule: &Schedule, option_index: usize) -> Option<Schedule>
                 }
             }
         }
+    } else if option_index == 5 {
+        loop {
+            println!("Are you sure you want to delete {}? (type yes to confirm)", schedule.name);
+
+            if let Some(true) = console::yes_or_no() {
+                return Some(None);
+            }
+        }
     } else {
         panic!("Expected option index to be less than the length of change options");
     }
 
-    Some(new_schedule)
+    Some(Some(new_schedule))
 }
 
 fn prompt(app_data: &mut AppData) {
@@ -238,8 +247,16 @@ fn prompt(app_data: &mut AppData) {
     } else {
         match response.parse::<usize>() {
             Ok(option_index) if option_index < CHANGE_OPTIONS.len() => {
-                if let Some(new_schedule) = change_schedule(schedule, option_index) {
-                    app_data.replace_schedule(schedule_index, new_schedule);
+                match change_schedule(schedule, option_index) {
+                    Some(Some(replacement)) => {
+                        app_data.replace_schedule(schedule_index, replacement);
+                        println!("Successfully updated schedule.");
+                    }
+                    Some(None) => {
+                        app_data.remove_schedule(schedule_index);
+                        println!("Successfully removed schedule.");
+                    }
+                    _ => return,
                 }
             },
             _ => {
@@ -260,7 +277,6 @@ fn prompt(app_data: &mut AppData) {
         None => println!("Invalid response, assumed 'no'"),
     }
 }
-
 
 pub fn start(app_data: &mut AppData) {
     println!("Type BACK at any point to go back to the main menu");

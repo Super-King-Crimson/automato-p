@@ -75,22 +75,22 @@ impl Schedule {
                                     if !status.success() {
                                         eprintln!("\nSound failed to play: \
                                         check to make sure your sound path is correct");
-                                    } else {
-                                        println!("Playing alarm...");
+                                        thread::sleep(Duration::from_secs(2));
                                     }
                                 } else {
                                     proc.kill().expect("Proc should not have been terminated as it has already been checked for");
                                     eprintln!("\nSound took too long start playing");
+                                    thread::sleep(Duration::from_secs(2));
                                 }
                             }
                             Err(_) => {
                                 eprintln!("\nSound failed to play: \
                                 check to make sure mpg123 is installed");
+                                thread::sleep(Duration::from_secs(2));
                             }
                         }
                     }
-                    
-                    thread::sleep(Duration::from_secs(2)); 
+                
                     console::clear();
 
                     if working {

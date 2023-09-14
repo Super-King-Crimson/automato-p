@@ -153,7 +153,7 @@ impl SaveLoad {
         serde_json::from_str(&contents).expect(EXPECT_VALID_JSON)
     }
 
-    pub fn change_settings(&self, new_settings: AppSettings) {
+    pub fn save_settings(&self, new_settings: &AppSettings) {
         let json = serde_json::to_string(&new_settings).expect(EXPECT_VALID_TO_JSON) + "\n";
         write_to_file(&self.settings_path, &json).expect(EXPECT_FILE);
     }
