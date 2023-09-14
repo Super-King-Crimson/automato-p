@@ -58,8 +58,8 @@ impl AppData {
     }
 
     pub fn set_sound_path(&mut self, new_path: Option<String>) {
-        self.save_load.save_settings(&self.app_settings);
         self.app_settings.sound_path = new_path;
+        self.save_load.save_settings(&self.app_settings);
     }
 }
 
@@ -79,14 +79,14 @@ pub fn startup() -> AppData {
 pub fn run(mut app_data: &mut AppData) -> bool {
     console::clear();
 
-    println!("Welcome to your automatic pomodoro timer!");
+    println!("Welcome to your automatic pomodoro timer, automato-p!");
 
     println!("What would you like to do?");
 
     println!("0: Start a schedule");
     println!("1: Create a new schedule");
     println!("2: Modify a pre-existing schedule");
-    println!("3: Configure app defaults");
+    println!("3: Change app settings");
     println!("4: Exit app");
 
     let input = console::get_input_trimmed();

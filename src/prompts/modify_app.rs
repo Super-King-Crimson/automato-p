@@ -45,11 +45,14 @@ fn prompt(app_data: &mut AppData) {
                         app_data.set_sound_path(Some(path));
                         println!("Successfully changed path. The sound at that path will be played whenever an alarm ends.");
                     }
-                    Some(None) => println!("Succesfully changed path. A sound will no longer play when an alarm ends."),
+                    Some(None) => {
+                        app_data.set_sound_path(None);
+                        println!("Succesfully changed path. A sound will no longer play when an alarm ends.")
+                    },
                     None => println!("Path not found, please try again"),
                 }
 
-                println!("Would you like to continue changing app settings? (y/n)");
+                println!("Would you like to continue changing automato-p's settings? (y/n)");
                 if let None | Some(false) = console::yes_or_no() {
                     break;
                 }

@@ -21,10 +21,6 @@ pub fn get_input_trimmed() -> String {
     get_input().trim().to_string()
 }
 
-pub fn hide_cursor() {
-    io::stdout().execute(cursor::Hide).unwrap();
-}
-
 pub fn move_cursor_to(x: u16, y: u16) {
     io::stdout().execute(cursor::MoveTo(x, y)).unwrap();
 }

@@ -176,7 +176,7 @@ fn change_schedule(schedule: &Schedule, option_index: usize) -> Option<Option<Sc
 
                                 println!("Successfully changed rest type to standard");
                             } else {
-                                println!("Okay. Returning to main menu, as there are no other rest types.");
+                                println!("Returning to main menu, as there are no other rest types.");
                             }
                         } else {
                             println!("Invalid response");
@@ -267,7 +267,7 @@ fn prompt(app_data: &mut AppData) {
         }
     }
 
-    println!("Would you like to continue changing your schedule? (y/n)");
+    println!("Would you like to continue changing your schedules? (y/n)");
     match console::yes_or_no() {
         Some(true) => {
             prompt(app_data);

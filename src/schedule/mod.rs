@@ -48,12 +48,12 @@ impl Schedule {
         let mut block_count = 1;
 
         console::clear();
-        console::hide_cursor();
         
         println!("Working block 1");
 
         loop {
             console::move_cursor_to(0, 1);
+            console::clear_line();
             print!("{}", format::dur_to_hhmmss(dur));
             console::flush();
 
@@ -71,21 +71,19 @@ impl Schedule {
 
                         match result {
                             Ok(mut proc) => {
+                                // Some(None) means the sound was really short and we're done
+                                // Some(status) if status.success() means the sound is currently playing, which means we're still good!
                                 if let Some(status) = proc.try_wait().expect("Expected wait for process to be valid") {
                                     if !status.success() {
                                         eprintln!("\nSound failed to play: \
                                         check to make sure your sound path is correct");
                                         thread::sleep(Duration::from_secs(2));
                                     }
-                                } else {
-                                    proc.kill().expect("Proc should not have been terminated as it has already been checked for");
-                                    eprintln!("\nSound took too long start playing");
-                                    thread::sleep(Duration::from_secs(2));
                                 }
                             }
                             Err(_) => {
                                 eprintln!("\nSound failed to play: \
-                                check to make sure mpg123 is installed");
+                                check to make sure mpg123 is installed (sudo apt install mpg123)");
                                 thread::sleep(Duration::from_secs(2));
                             }
                         }
@@ -119,7 +117,6 @@ impl Schedule {
                                     blocks_per_long_rest.to_string(),
                                 );
                                 
-                                console::hide_cursor();
                                 dur = long_rest_duration;
                                 continue;
                             }
