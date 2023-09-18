@@ -7,12 +7,28 @@ const APP_PROMPTS: [&str; 1] = [
 ];
 
 fn prompt_change_audio() -> Option<Option<String>> {
-    println!("Please type the global path to the sound you want to play when an alarm ends.");
-    println!("If you no longer want to play a sound when an alarm ends, type the word NONE.");
-    let response = console::get_input_trimmed();
+    let response;
 
-    if response.eq("NONE") {
-        return Some(None);
+    loop {
+        println!("Please type the global path to the sound you want to play when an alarm ends.");
+        println!("If you no longer want to play a sound when an alarm ends, type the word NONE.");
+        let r = console::get_input_trimmed_exclude(&["NONE", "B"], false);
+
+        match r {
+            Ok(res) => {
+                response = res;
+                break;
+            }
+            Err(i) => {
+                if i == 0 {
+                    return Some(None);
+                } else if i == 1 {
+                    return None;
+                } else {
+                    panic!("How did we get here?");
+                }
+            }
+        }
     }
 
     let path = Path::new(&response);

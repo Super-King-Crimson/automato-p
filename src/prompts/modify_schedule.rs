@@ -1,4 +1,4 @@
-use crate::{app::{console, AppData}, schedule::{Schedule, RepeatType::*, RestType::{*, self}, format::try_hhmmss_to_dur}};
+use crate::{app::{console, AppData, EXPECT_VERIFIED, schedule_list}, schedule::{Schedule, RepeatType::*, RestType::{*, self}, format::try_hhmmss_to_dur}};
 
 const CHANGE_OPTIONS: [&str; 6] = [
     "Name",
@@ -53,6 +53,7 @@ fn prompt_create_long_rest() -> Option<RestType> {
 }
 
 fn change_schedule(schedule: &Schedule, option_index: usize) -> Option<Option<Schedule>> {
+    todo!("FIXME: fix this garbage code, move all prints to the top")
     let mut new_schedule = schedule.clone();
 
     if option_index == 0 {
@@ -89,9 +90,9 @@ fn change_schedule(schedule: &Schedule, option_index: usize) -> Option<Option<Sc
                         println!("How many work rest blocks should your schedule repeat before it ends on its own?");
                         
                         loop {
-                            let response = console::get_input_trimmed();
+                            let response = console::get_input_trimmed_exclude(&["B"], false);
 
-                            if response.eq_ignore_ascii_case("BACK") {
+                            if response.is_err() {
                                 return None
                             } 
                             
@@ -210,27 +211,25 @@ fn prompt(app_data: &mut AppData) {
     println!("Which schedule would you like to modify?");
 
     app_data.display_schedule_list();
-    let response = console::get_input_trimmed();
+    let schedule_index;
+    loop {
+        let response = console::get_input_trimmed_exclude(&["B"], false);
 
-    if response.eq_ignore_ascii_case("back") {
-        return;
-    }
+        if response.is_err() {
+            return;
+        }
 
-    let schedule_index = match response.parse::<usize>() {
-        Ok(num) => num,
-        Err(_) => {
-            console::clear();
-            println!("'{response}' is not a valid schedule. Please try again.");
-            prompt(app_data);
-            return
-        },
-    };
+        let response = response.expect(EXPECT_VERIFIED);
 
-    if schedule_index >= app_data.num_schedules() {
-        console::clear();
-        println!("'{response}' is not a valid schedule. Please try again.");
-        prompt(app_data);
-        return
+        schedule_index = match response.parse::<usize>() {
+            Ok(num) if num < app_data.num_schedules() => num,
+            _ => {
+                println!("'{response}' is not a valid schedule. Please try again.");
+                continue;
+            },
+        };
+
+        break;
     }
 
     let schedule = app_data.get_schedule(schedule_index);
@@ -240,11 +239,15 @@ fn prompt(app_data: &mut AppData) {
         println!("{i}: {opt}");
     }
 
-    let response = console::get_input_trimmed();
+    loop {
+        let response = console::get_input_trimmed_exclude(&["B"], false);
 
-    if response.eq_ignore_ascii_case("back") {
-        return;
-    } else {
+        if response.is_err() {
+            return;
+        }
+
+        let response = response.expect(EXPECT_VERIFIED);
+        
         match response.parse::<usize>() {
             Ok(option_index) if option_index < CHANGE_OPTIONS.len() => {
                 match change_schedule(schedule, option_index) {
@@ -256,15 +259,16 @@ fn prompt(app_data: &mut AppData) {
                         app_data.remove_schedule(schedule_index);
                         println!("Successfully removed schedule.");
                     }
-                    _ => return,
+                    _ => break,
                 }
             },
             _ => {
                 println!("'{response}' is not a valid response. Please try again.");
-                prompt(app_data);
-                return;
+                continue;
             }
         }
+
+        break;
     }
 
     println!("Would you like to continue changing your schedules? (y/n)");

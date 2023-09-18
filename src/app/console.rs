@@ -61,3 +61,21 @@ pub fn play_sound(path: &str) -> Result<Child, io::Error> {
         .stderr(Stdio::null())
         .spawn()
 }
+
+pub fn get_input_trimmed_exclude(excludes: &[&str], case_sensitive: bool) -> Result<String, usize> {
+    let input = get_input_trimmed();
+
+    for (i, excl) in excludes.iter().enumerate() {
+        if case_sensitive {
+            if input.eq(excl) {
+                return Err(i);
+            }
+        } else {
+            if input.eq_ignore_ascii_case(excl) {
+                return Err(i);
+            }
+        }
+    }
+
+    return Ok(input);
+}

@@ -1,14 +1,18 @@
-pub mod save_load;
-pub mod console;
 pub mod app_settings;
+pub mod console;
 pub mod error;
+pub mod save_load;
 pub mod schedule_list;
+
+pub const B_FOR_BACK: &str = "Type B at any point to return to the previous menu.";
+
+pub const EXPECT_VERIFIED: &str = "Value has already been verified to exist";
 
 use crate::{prompts, schedule::Schedule};
 use save_load::SaveLoad;
 
-use schedule_list::ScheduleList; 
 use app_settings::AppSettings;
+use schedule_list::ScheduleList;
 
 pub struct AppData {
     app_settings: AppSettings,
@@ -42,7 +46,8 @@ impl AppData {
     }
 
     pub fn start_schedule(&self, index: usize) {
-        self.schedule_list.start_schedule(index, self.get_sound_path());
+        self.schedule_list
+            .start_schedule(index, self.get_sound_path());
     }
 
     pub fn num_schedules(&self) -> usize {
@@ -76,33 +81,47 @@ pub fn startup() -> AppData {
     }
 }
 
-pub fn run(mut app_data: &mut AppData) -> bool {
+pub fn run(app_data: &mut AppData) -> bool {
     console::clear();
 
     println!("Welcome to your automatic pomodoro timer, automato-p!");
+    println!("Input B at any point to go back to the previous menu");
 
     println!("What would you like to do?");
-
     println!("0: Start a schedule");
     println!("1: Create a new schedule");
     println!("2: Modify a pre-existing schedule");
     println!("3: Change app settings");
     println!("4: Exit app");
 
-    let input = console::get_input_trimmed();
+    loop {
+        let input = {
+            let res = console::get_input_trimmed_exclude(&["B"], false);
 
-    console::clear();
+            match res {
+                Ok(r) => r,
+                Err(_) => "4".to_string(), //If they type 'B' at the main menu, treat it as exiting the app
+            }
+        };
 
-    match input.parse() {
-        Ok(0_u8) => prompts::start_schedule::start(&mut app_data),
-        Ok(1) => prompts::create_schedule::start(&mut app_data),
-        Ok(2) => prompts::modify_schedule::start(&mut app_data),
-        Ok(3) => prompts::modify_app::start(&mut app_data),
-        Ok(4) => {
-            return false;
-        }
-        _ => panic!("invalid"),
-    };
+        console::clear();
+
+        match input.parse::<u8>() {
+            Ok(i @ 0..=4) => {
+                match i {
+                    0 => prompts::start_schedule::start(app_data),
+                    1 => prompts::create_schedule::start(app_data),
+                    2 => prompts::modify_schedule::start(app_data),
+                    3 => prompts::modify_app::start(app_data),
+                    4 => return false,
+                    _ => unreachable!()
+                }
+
+                break;
+            }
+            _ => println!("{input} is not a valid response, try again"),
+        };
+    }
 
     true
 }

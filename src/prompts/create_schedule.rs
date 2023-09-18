@@ -1,5 +1,5 @@
 use crate::{
-    app::{console, AppData},
+    app::{console, AppData, EXPECT_VERIFIED},
     schedule::{format, RepeatType, RestType, Schedule},
 };
 
@@ -57,13 +57,12 @@ fn prompt() -> Option<ScheduleCreateResponses> {
     while question_index < SCHEDULE_QUESTIONS.len() {
         console::clear();
 
-        println!(
-            "{} (type 'BACK' at any point to go to previous question/menu)",
-            SCHEDULE_QUESTIONS[question_index]
-        );
-        let response = console::get_input_trimmed();
+        let q = SCHEDULE_QUESTIONS[question_index];
 
-        if response.eq_ignore_ascii_case("back") {
+        println!("{q}");
+        let response = console::get_input_trimmed_exclude(&["B"], false);
+
+        if response.is_err() {
             match previous_questions.pop() {
                 Some(prev) => {
                     question_index = prev;
@@ -73,22 +72,27 @@ fn prompt() -> Option<ScheduleCreateResponses> {
             }
         }
 
+        let response = response.expect(EXPECT_VERIFIED);
+
         previous_questions.push(question_index);
 
         match question_index {
             0 => responses.name = response,
             1 => responses.work_duration = response,
             2 => responses.rest_duration = response,
-            3 => if response.eq("1") {
-                responses.repeat_type = RepeatTypeResponse::Finite {
-                    blocks: String::new(),
+            3 => {
+                if response.eq("1") {
+                    responses.repeat_type = RepeatTypeResponse::Finite {
+                        blocks: String::new(),
+                    }
+                } else if response.eq("2") {
+                    responses.repeat_type = RepeatTypeResponse::Infinite;
+                    question_index += 1;
+                } else {
+                    println!("Invalid response: must be 1 or 2");
+                    continue; //restarts question ask, incrementer is at the end     
                 }
-            } else if response.eq("2") {
-                responses.repeat_type = RepeatTypeResponse::Infinite;
-                question_index += 1;
-            } else {
-                panic!("Invalid response: must be 1 or 2");
-            },
+            }
             4 => if let RepeatTypeResponse::Finite { blocks } = &mut responses.repeat_type {
                 *blocks = response;
             },
@@ -98,7 +102,8 @@ fn prompt() -> Option<ScheduleCreateResponses> {
                 responses.rest_type = RestTypeResponse::Standard;
                 question_index += 2;
             } else {
-                panic!("Invalid response: y or n");
+                println!("Invalid response: must be y or n");
+                continue;
             },
             6 => if let RestTypeResponse::LongRest { blocks_per_long_rest, ..} = &mut responses.rest_type {
                 *blocks_per_long_rest = response;
@@ -106,7 +111,7 @@ fn prompt() -> Option<ScheduleCreateResponses> {
             7 => if let RestTypeResponse::LongRest { long_rest_duration, .. } = &mut responses.rest_type {
                 *long_rest_duration = response;
             }
-            _ => panic!("How Did You Do This"),
+            _ => unreachable!(),
         }
 
         question_index += 1;

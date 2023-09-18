@@ -7,9 +7,12 @@ fn main() {
     
     loop {
         if app::run(&mut app_data) == false {
-            break;
+            println!("Are you sure you want to exit the app? (input y to confirm)");
+            
+            if let Some(true) = app::console::yes_or_no() {
+                println!("Thanks for using automato-p!");
+                break;
+            }
         }
     }
-
-    println!("Thanks for using automato-p!");
 }
