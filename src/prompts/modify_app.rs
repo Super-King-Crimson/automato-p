@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::app::{console, AppData};
+use crate::app::{console, AppData, BACK_CHARACTERS, EXPECT_VERIFIED};
 
 const APP_PROMPTS: [&str; 1] = [
     "Change the app's audio"
@@ -10,9 +10,7 @@ fn prompt_change_audio() -> Option<Option<String>> {
     let response;
 
     loop {
-        println!("Please type the global path to the sound you want to play when an alarm ends.");
-        println!("If you no longer want to play a sound when an alarm ends, type the word NONE.");
-        let r = console::get_input_trimmed_exclude(&["NONE", "B"], false);
+        let r = console::get_input_trimmed_exclude(&[&["NONE"], &BACK_CHARACTERS[..]].concat(), false);
 
         match r {
             Ok(res) => {
@@ -22,10 +20,8 @@ fn prompt_change_audio() -> Option<Option<String>> {
             Err(i) => {
                 if i == 0 {
                     return Some(None);
-                } else if i == 1 {
-                    return None;
                 } else {
-                    panic!("How did we get here?");
+                    return None;
                 }
             }
         }
@@ -43,41 +39,56 @@ fn prompt_change_audio() -> Option<Option<String>> {
 fn prompt(app_data: &mut AppData) {
     loop {
         console::clear();
-        println!("What would you like to configure about automato-p? (Type BACK to go back to the previous men8)");
+        println!("What would you like to configure about automato-p?");
         for (i, prompt) in APP_PROMPTS.iter().enumerate() {
             println!("{i}: {prompt}");
         }
 
-        let response = console::get_input_trimmed();
+        loop {
+            let response = console::get_input_trimmed_exclude(&BACK_CHARACTERS, false);
+    
+            if response.is_err() {
+                return;
+            }
+    
+            let response = response.expect(EXPECT_VERIFIED);
+    
+            match response.as_ref() {
+                "0" => {
+                    println!("Please type the global path to the sound you want to play when an alarm ends.");
+                    println!("If you no longer want to play a sound when an alarm ends, type the word NONE.");
 
-        if response.eq_ignore_ascii_case("BACK") {
-            break;
-        }
+                    loop {
+                        match prompt_change_audio() {
+                            Some(Some(path)) => {
+                                app_data.set_sound_path(Some(path));
+                                println!("Successfully changed path. The sound at that path will be played whenever an alarm ends.");
+                            }
+                            Some(None) => {
+                                app_data.set_sound_path(None);
+                                println!("Succesfully changed path. A sound will no longer play when an alarm ends.")
+                            },
+                            None => {
+                                println!("Path not found, please try again");
+                                continue;
+                            }
+                        }
 
-        match response.as_ref() {
-            "0" => {
-                match prompt_change_audio() {
-                    Some(Some(path)) => {
-                        app_data.set_sound_path(Some(path));
-                        println!("Successfully changed path. The sound at that path will be played whenever an alarm ends.");
+                        break;
                     }
-                    Some(None) => {
-                        app_data.set_sound_path(None);
-                        println!("Succesfully changed path. A sound will no longer play when an alarm ends.")
-                    },
-                    None => println!("Path not found, please try again"),
                 }
+                _ => {
+                    println!("'{response}' is not a valid response.");
+                }
+            }
+            
+            println!("Would you like to continue changing automato-p's settings? (y/n)");
+                    
+            if let Some(true) = console::yes_or_no() {
+                continue;
+            }
 
-                println!("Would you like to continue changing automato-p's settings? (y/n)");
-                if let None | Some(false) = console::yes_or_no() {
-                    break;
-                }
-            }
-            _ => {
-                console::clear();
-                println!("Invalid response.");
-                break;
-            }
+            break;
         }
     }
 }

@@ -1,5 +1,7 @@
 use crate::schedule::Schedule;
 
+use super::EXPECT_VERIFIED;
+
 pub struct ScheduleList {
     list: Vec<Schedule>,
 }
@@ -26,7 +28,7 @@ impl ScheduleList {
     }
     
     pub fn get(&self, index: usize) -> &Schedule {
-        self.list.get(index).unwrap()
+        self.list.get(index).expect(EXPECT_VERIFIED)
     }
 
     pub fn push(&mut self, schedule: Schedule) {

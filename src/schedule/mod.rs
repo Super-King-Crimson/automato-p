@@ -1,6 +1,6 @@
 pub mod format;
 
-use crate::app::console;
+use crate::app::{console, EXPECT_VERIFIED};
 use std::{time::Duration, thread, fmt::Display};
 use serde::{Serialize, Deserialize}; 
 
@@ -165,7 +165,7 @@ impl Display for Schedule {
                 _ => String::new(),
             },
             repeat_type_details = match self.repeat_type {
-                RepeatType::Finite(blocks) => format!(", {} blocks long ({})", blocks, format::dur_to_xhxmxs(self.get_total_duration().unwrap())),
+                RepeatType::Finite(blocks) => format!(", {} blocks long ({})", blocks, format::dur_to_xhxmxs(self.get_total_duration().expect(EXPECT_VERIFIED))),
                 _ => String::new(),
             }
         )

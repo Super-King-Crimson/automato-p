@@ -4,9 +4,11 @@ pub mod error;
 pub mod save_load;
 pub mod schedule_list;
 
-pub const B_FOR_BACK: &str = "Type B at any point to return to the previous menu.";
+pub const B_FOR_BACK: &str = "Type BACK at any point to return to the previous menu.";
+pub const BACK_CHARACTERS: [&str; 1] = ["BACK"];
 
 pub const EXPECT_VERIFIED: &str = "Value has already been verified to exist";
+
 
 use crate::{prompts, schedule::Schedule};
 use save_load::SaveLoad;
@@ -84,19 +86,19 @@ pub fn startup() -> AppData {
 pub fn run(app_data: &mut AppData) -> bool {
     console::clear();
 
-    println!("Welcome to your automatic pomodoro timer, automato-p!");
-    println!("Input B at any point to go back to the previous menu");
-
-    println!("What would you like to do?");
-    println!("0: Start a schedule");
-    println!("1: Create a new schedule");
-    println!("2: Modify a pre-existing schedule");
-    println!("3: Change app settings");
-    println!("4: Exit app");
-
     loop {
+        println!("Welcome to your automatic pomodoro timer, automato-p!");
+        println!("{B_FOR_BACK}");
+
+        println!("What would you like to do?");
+        println!("0: Start a schedule");
+        println!("1: Create a new schedule");
+        println!("2: Modify a pre-existing schedule");
+        println!("3: Change app settings");
+        println!("4: Exit app");
+
         let input = {
-            let res = console::get_input_trimmed_exclude(&["B"], false);
+            let res = console::get_input_trimmed_exclude(&BACK_CHARACTERS, false);
 
             match res {
                 Ok(r) => r,

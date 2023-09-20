@@ -73,7 +73,7 @@ pub fn try_hhmmss_to_dur(str: &str) -> Option<Duration> {
             return None
         }
 
-        let parsed: u64 = s.parse().unwrap();
+        let parsed: u64 = s.parse().ok()?;
 
         if parsed > 60 {
             if i == 0 || i == 1 {

@@ -6,7 +6,7 @@ use super::app_settings::AppSettings;
 const SCHEDULE_PATH: &str = "./user/schedules.txt";
 const SETTINGS_PATH: &str = "./user/settings.json";
 
-const EXPECT_VALID_UTF8: &str = "Line should contain valid UTF-8";
+pub const EXPECT_VALID_UTF8: &str = "Line should contain valid UTF-8";
 const EXPECT_FILE: &str = "File should exist, as it is created at the beginning of the program's start";
 const EXPECT_WRITE: &str = "File should be able to be written to";
 const EXPECT_VALID_JSON: &str = "Schedule file should contain valid JSON";
@@ -79,12 +79,12 @@ impl SaveLoad {
 
     pub fn read_schedules(&self) -> Vec<Schedule> {
         read_lines_from_file(&self.schedule_path).expect(EXPECT_FILE)
-            .map(|line| serde_json::from_str(&line.unwrap()).unwrap())
+            .map(|line| serde_json::from_str(&line.expect(EXPECT_VALID_UTF8)).expect(EXPECT_VALID_JSON))
             .collect()
     }
 
     pub fn append_schedule(&self, schedule: &Schedule) {
-        let mut json = serde_json::to_string(schedule).unwrap();
+        let mut json = serde_json::to_string(schedule).expect(EXPECT_VALID_TO_JSON);
         json.push('\n');
 
         append_to_file(&self.schedule_path, &json).expect(EXPECT_VALID_UTF8);

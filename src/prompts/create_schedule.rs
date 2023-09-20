@@ -1,5 +1,7 @@
+use std::time::Duration;
+
 use crate::{
-    app::{console, AppData, EXPECT_VERIFIED},
+    app::{console, AppData, BACK_CHARACTERS, EXPECT_VERIFIED},
     schedule::{format, RepeatType, RestType, Schedule},
 };
 
@@ -7,6 +9,7 @@ enum RepeatTypeResponse {
     Infinite,
     Finite { blocks: String },
 }
+use RepeatTypeResponse as RpTR;
 
 enum RestTypeResponse {
     Standard,
@@ -15,6 +18,7 @@ enum RestTypeResponse {
         long_rest_duration: String,
     },
 }
+use RestTypeResponse as RsTR;
 
 struct ScheduleCreateResponses {
     name: String,
@@ -60,7 +64,7 @@ fn prompt() -> Option<ScheduleCreateResponses> {
         let q = SCHEDULE_QUESTIONS[question_index];
 
         println!("{q}");
-        let response = console::get_input_trimmed_exclude(&["B"], false);
+        let response = console::get_input_trimmed_exclude(&BACK_CHARACTERS, false);
 
         if response.is_err() {
             match previous_questions.pop() {
@@ -74,7 +78,10 @@ fn prompt() -> Option<ScheduleCreateResponses> {
 
         let response = response.expect(EXPECT_VERIFIED);
 
-        previous_questions.push(question_index);
+        if Some(&question_index) != previous_questions.last() {
+            previous_questions.push(question_index);
+        }
+
 
         match question_index {
             0 => responses.name = response,
@@ -82,34 +89,50 @@ fn prompt() -> Option<ScheduleCreateResponses> {
             2 => responses.rest_duration = response,
             3 => {
                 if response.eq("1") {
-                    responses.repeat_type = RepeatTypeResponse::Finite {
+                    responses.repeat_type = RpTR::Finite {
                         blocks: String::new(),
                     }
                 } else if response.eq("2") {
-                    responses.repeat_type = RepeatTypeResponse::Infinite;
+                    responses.repeat_type = RpTR::Infinite;
                     question_index += 1;
                 } else {
-                    println!("Invalid response: must be 1 or 2");
-                    continue; //restarts question ask, incrementer is at the end     
+                    continue; //restarts question ask, incrementer is at the end
                 }
             }
-            4 => if let RepeatTypeResponse::Finite { blocks } = &mut responses.repeat_type {
-                *blocks = response;
-            },
-            5 => if response.eq_ignore_ascii_case("y") {
-                responses.rest_type = RestTypeResponse::LongRest { blocks_per_long_rest: String::new(), long_rest_duration: String::new() }
-            } else if response.eq_ignore_ascii_case("n") {
-                responses.rest_type = RestTypeResponse::Standard;
-                question_index += 2;
-            } else {
-                println!("Invalid response: must be y or n");
-                continue;
-            },
-            6 => if let RestTypeResponse::LongRest { blocks_per_long_rest, ..} = &mut responses.rest_type {
-                *blocks_per_long_rest = response;
+            4 => {
+                if let RpTR::Finite { blocks } = &mut responses.repeat_type {
+                    *blocks = response;
+                }
             }
-            7 => if let RestTypeResponse::LongRest { long_rest_duration, .. } = &mut responses.rest_type {
-                *long_rest_duration = response;
+            5 => {
+                if response.eq_ignore_ascii_case("y") {
+                    responses.rest_type = RsTR::LongRest {
+                        blocks_per_long_rest: String::new(),
+                        long_rest_duration: String::new(),
+                    }
+                } else if response.eq_ignore_ascii_case("n") {
+                    responses.rest_type = RsTR::Standard;
+                    question_index += 2;
+                } else {
+                    continue;
+                }
+            }
+            6 => {
+                if let RsTR::LongRest {
+                    blocks_per_long_rest,
+                    ..
+                } = &mut responses.rest_type
+                {
+                    *blocks_per_long_rest = response;
+                }
+            }
+            7 => {
+                if let RsTR::LongRest {
+                    long_rest_duration, ..
+                } = &mut responses.rest_type
+                {
+                    *long_rest_duration = response;
+                }
             }
             _ => unreachable!(),
         }
@@ -120,31 +143,108 @@ fn prompt() -> Option<ScheduleCreateResponses> {
     Some(responses)
 }
 
-fn convert_to_schedule(responses: ScheduleCreateResponses) -> Schedule {
-    Schedule {
-        name: responses.name,
-        work_duration: format::hhmmss_to_dur(&responses.work_duration),
-        rest_duration: format::hhmmss_to_dur(&responses.rest_duration),
-        repeat_type: match responses.repeat_type {
-            RepeatTypeResponse::Finite { blocks } => RepeatType::Finite(blocks.parse().unwrap()),
-            RepeatTypeResponse::Infinite => RepeatType::Infinite,
-        },
-        rest_type: match responses.rest_type {
-            RestTypeResponse::LongRest {
-                blocks_per_long_rest: blocks,
-                long_rest_duration: dur,
-            } => RestType::LongRest {
-                blocks_per_long_rest: blocks.parse().unwrap(),
-                long_rest_duration: format::hhmmss_to_dur(&dur),
-            },
-            RestTypeResponse::Standard => RestType::Standard,
-        },
+fn try_convert_to_schedule(responses: ScheduleCreateResponses) -> Result<Schedule, String> {
+    let mut issues = String::new();
+
+    let work_duration = format::try_hhmmss_to_dur(&responses.work_duration);
+    if work_duration.is_none() {
+        issues += &format!(
+            "'{}' could not be converted into an HH:MM:SS duration - duration of work block\n",
+            &responses.work_duration
+        );
+    }
+
+    let rest_duration = format::try_hhmmss_to_dur(&responses.rest_duration);
+    if work_duration.is_none() {
+        issues += &format!(
+            "'{}' could not be converted into an HH:MM:SS duration - duration of rest block\n",
+            &responses.rest_duration
+        );
+    }
+
+    let mut finite_blocks: Option<Option<u32>> = None;
+    
+    if let RpTR::Finite { blocks } = responses.repeat_type { 
+        finite_blocks = { 
+            match blocks.parse() { 
+                Ok(num) => Some(Some(num)), 
+                Err(_) => { 
+                    issues += &format!("'{blocks}' must be a positive integer - number of blocks before schedule stops\n" ); 
+
+                    Some(None)
+                }
+            } 
+        }
+    }
+
+    let (mut long_rest_blocks, mut long_rest_dur): (Option<Option<u32>>, Option<Option<Duration>>) = (None, None);
+
+    if let RsTR::LongRest { blocks_per_long_rest, long_rest_duration } = responses.rest_type {
+        long_rest_blocks = if let Ok(b) = blocks_per_long_rest.parse() {
+            Some(Some(b))
+        } else {
+            issues += &format!("'{blocks_per_long_rest}' must be a positive integer - number of blocks per long rest\n");
+
+            Some(None)
+        };
+
+        long_rest_dur = if let Some(d) = format::try_hhmmss_to_dur(&long_rest_duration) {
+            Some(Some(d))
+        } else {
+            issues += &format!("'{long_rest_duration}' could not be converted into an HH:MM:SS duration - long rest duration\n");
+
+            Some(None)
+        }
+    }
+
+    if issues.len() == 0 {
+        Ok(
+            Schedule {
+                name: responses.name,
+                work_duration: work_duration.expect(EXPECT_VERIFIED),
+                rest_duration: rest_duration.expect(EXPECT_VERIFIED),
+                repeat_type: if finite_blocks.is_none() {
+                    RepeatType::Infinite
+                } else {
+                    RepeatType::Finite(finite_blocks.expect(EXPECT_VERIFIED).expect(EXPECT_VERIFIED))
+                },
+                rest_type: if long_rest_blocks.is_none() {
+                    RestType::Standard
+                } else {
+                    RestType::LongRest {
+                        blocks_per_long_rest: long_rest_blocks.expect(EXPECT_VERIFIED).expect(EXPECT_VERIFIED), 
+                        long_rest_duration: long_rest_dur.expect(EXPECT_VERIFIED).expect(EXPECT_VERIFIED)
+                    }
+                },
+            }
+        )
+    } else {
+        Err(issues)
     }
 }
 
 pub fn start(app_data: &mut AppData) {
-    if let Some(responses) = prompt() {
-        let schedule = convert_to_schedule(responses);
-        app_data.push_schedule(schedule);
+    loop {
+        if let Some(responses) = prompt() {
+            let result = try_convert_to_schedule(responses);
+    
+            match result {
+                Ok(schedule) => app_data.push_schedule(schedule),
+                Err(issues) => {
+                    println!("Failed to convert responses to a schedule, as the following issues were present:");
+                    for (line, i) in issues.lines().zip(1u8..) {
+                        println!("Issue {i}: {line}");
+                    }
+    
+                    println!("Would you like to try to make a schedule again? (Input 'yes' to confirm)");
+    
+                    if let Some(true) = console::yes_or_no() {
+                        continue;
+                    }
+                }
+            }
+        }
+
+        break;
     }
 }

@@ -1,11 +1,11 @@
-use crate::app::{console, AppData, EXPECT_VERIFIED};
+use crate::app::{console, AppData, EXPECT_VERIFIED, BACK_CHARACTERS};
 
 pub fn start(app_data: &mut AppData) {
     println!("Which schedule would you like to start?");
     app_data.display_schedule_list();
 
     loop {
-        let response = console::get_input_trimmed_exclude(&["B"], false);
+        let response = console::get_input_trimmed_exclude(&BACK_CHARACTERS, false);
 
         if response.is_err() {
             return;
